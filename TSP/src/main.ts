@@ -194,7 +194,16 @@ window.addEventListener('ifc-file-selected', async (event: CustomEvent) => {
   console.log('Showing IFC file:', filename);
   
   try {
-    // Показываем только выбранную модель (файлы уже предзагружены)
+    // Сначала скрываем все модели
+    console.log('Hiding all models...');
+    for (const [id, model] of fragments.list) {
+      model.visible = false;
+      if (world && world.scene.three.children.includes(model.object)) {
+        world.scene.three.remove(model.object);
+      }
+    }
+    
+    // Показываем только выбранную модель
     const modelId = filename.replace(".ifc", "");
     auth.showModel(fragments, modelId, true, world);
     
@@ -387,6 +396,16 @@ async function initializeAuth() {
     console.log('Preloading all user IFC files...');
     await auth.preloadAllUserIFCFiles(ifcLoader);
     console.log('All IFC files preloaded successfully');
+    
+    // Скрываем все загруженные файлы по умолчанию
+    console.log('Hiding all preloaded files...');
+    for (const [id, model] of fragments.list) {
+      model.visible = false;
+      if (world && world.scene.three.children.includes(model.object)) {
+        world.scene.three.remove(model.object);
+      }
+    }
+    console.log('All files are now hidden');
     
     // Если есть файл для загрузки из URL, показываем его
     if (window.fileToLoad) {

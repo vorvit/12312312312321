@@ -1,58 +1,28 @@
-#!/usr/bin/env python3
+import requests
+import json
 
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Test login
+login_data = {
+    "email": "vorvit@bk.ru",
+    "password": "password123"
+}
 
-from passlib.context import CryptContext
-import sqlite3
+response = requests.post("http://localhost:8000/auth/login", json=login_data)
+print("Login response:", response.status_code)
+print("Login data:", response.json())
 
-# Настройка хеширования паролей
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-def test_authentication():
-    # Подключение к базе данных
-    conn = sqlite3.connect('auth.db')
-    cursor = conn.cursor()
-    
-    # Получение пользователя
-    cursor.execute('SELECT email, hashed_password, is_admin, is_active FROM users WHERE email = ?', ('vorvit@bk.ru',))
-    user = cursor.fetchone()
-    
-    if not user:
-        print("❌ Пользователь не найден")
-        return False
-    
-    email, hashed_password, is_admin, is_active = user
-    print(f"✅ Пользователь найден: {email}")
-    print(f"   is_admin: {is_admin}")
-    print(f"   is_active: {is_active}")
-    print(f"   password hash: {hashed_password[:50]}...")
-    
-    # Тестирование пароля
-    test_password = "123qwerty"
-    print(f"\n🔐 Тестирование пароля: {test_password}")
-    
-    password_valid = pwd_context.verify(test_password, hashed_password)
-    print(f"   Результат проверки: {password_valid}")
-    
-    if password_valid:
-        print("✅ Пароль правильный!")
-        return True
+if response.status_code == 200:
+    data = response.json()
+    if data.get('access_token'):
+        token = data['access_token']
+        print(f"Token: {token[:20]}...")
+        
+        # Test files API
+        headers = {"Authorization": f"Bearer {token}"}
+        files_response = requests.get("http://localhost:8000/api/files", headers=headers)
+        print("Files response:", files_response.status_code)
+        print("Files data:", files_response.json())
     else:
-        print("❌ Пароль неправильный!")
-        
-        # Попробуем другие варианты паролей
-        common_passwords = ["123456", "password", "admin", "qwerty", "123qwerty", "vorvit"]
-        print("\n🔍 Проверяем другие возможные пароли:")
-        for pwd in common_passwords:
-            if pwd_context.verify(pwd, hashed_password):
-                print(f"✅ Найден правильный пароль: {pwd}")
-                return True
-            else:
-                print(f"❌ {pwd}")
-        
-        return False
-
-if __name__ == "__main__":
-    test_authentication()
+        print("No access token in response")
+else:
+    print("Login failed")

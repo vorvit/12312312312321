@@ -327,7 +327,7 @@ function viewFile(filename) {
         return;
     }
     
-    const url = `http://localhost:5175?token=${token}&file=${encodeURIComponent(filename)}`;
+    const url = `http://localhost:5174?token=${token}&file=${encodeURIComponent(filename)}`;
     window.open(url, '_blank');
 }
 
@@ -344,7 +344,7 @@ function openIFCViewer() {
         return;
     }
     
-    const url = `http://localhost:5175?token=${token}`;
+    const url = `http://localhost:5174?token=${token}`;
     window.open(url, '_blank');
 }
 
@@ -410,10 +410,179 @@ function showAlert(message, type = 'info') {
     setTimeout(() => { if (alertDiv.parentNode) alertDiv.remove(); }, 5000);
 }
 
+// File upload functionality
+let selectedFiles = [];
+
+function setupFileUpload() {
+    const fileInput = document.getElementById('fileInput');
+    const fileUploadArea = document.getElementById('fileUploadArea');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const selectedFilesDiv = document.getElementById('selectedFiles');
+    const filesList = document.getElementById('filesList');
+    const uploadProgress = document.getElementById('uploadProgress');
+    const uploadStatus = document.getElementById('uploadStatus');
+
+    // Click to browse files
+    fileUploadArea.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    // Drag and drop functionality
+    fileUploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        fileUploadArea.classList.add('dragover');
+    });
+
+    fileUploadArea.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        fileUploadArea.classList.remove('dragover');
+    });
+
+    fileUploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        fileUploadArea.classList.remove('dragover');
+        const files = Array.from(e.dataTransfer.files);
+        handleFileSelection(files);
+    });
+
+    // File input change
+    fileInput.addEventListener('change', (e) => {
+        const files = Array.from(e.target.files);
+        handleFileSelection(files);
+    });
+
+    // Upload button click
+    uploadBtn.addEventListener('click', uploadFiles);
+
+    function handleFileSelection(files) {
+        // Filter IFC files
+        const ifcFiles = files.filter(file => {
+            const ext = file.name.toLowerCase().split('.').pop();
+            return ['ifc', 'ifcxml', 'ifczip'].includes(ext);
+        });
+
+        if (ifcFiles.length === 0) {
+            showAlert('Please select IFC files (.ifc, .ifcxml, .ifczip)', 'warning');
+            return;
+        }
+
+        selectedFiles = ifcFiles;
+        displaySelectedFiles();
+        uploadBtn.disabled = false;
+    }
+
+    function displaySelectedFiles() {
+        filesList.innerHTML = '';
+        selectedFiles.forEach((file, index) => {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'd-flex justify-content-between align-items-center p-2 border rounded mb-2';
+            fileItem.innerHTML = `
+                <div>
+                    <i class="fas fa-file me-2"></i>
+                    <span>${file.name}</span>
+                    <small class="text-muted ms-2">(${(file.size / 1024).toFixed(1)} KB)</small>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFile(${index})">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            filesList.appendChild(fileItem);
+        });
+        selectedFilesDiv.style.display = 'block';
+    }
+
+    async function uploadFiles() {
+        if (selectedFiles.length === 0) return;
+
+        uploadBtn.disabled = true;
+        uploadProgress.style.display = 'block';
+        uploadStatus.textContent = 'Uploading files...';
+
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (let i = 0; i < selectedFiles.length; i++) {
+            const file = selectedFiles[i];
+            const progress = ((i + 1) / selectedFiles.length) * 100;
+            
+            uploadStatus.textContent = `Uploading ${file.name}... (${i + 1}/${selectedFiles.length})`;
+            document.querySelector('.progress-bar').style.width = `${progress}%`;
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                // Get CSRF token from cookies
+                const csrfToken = document.cookie
+                    .split('; ')
+                    .find(row => row.startsWith('csrf_token='))
+                    ?.split('=')[1];
+
+                const headers = {
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                };
+
+                if (csrfToken) {
+                    headers['X-CSRF-Token'] = csrfToken;
+                }
+
+                const response = await fetch('/files/upload', {
+                    method: 'POST',
+                    body: formData,
+                    headers: headers
+                });
+
+                if (response.ok) {
+                    successCount++;
+                } else {
+                    errorCount++;
+                    console.error(`Failed to upload ${file.name}`);
+                }
+            } catch (error) {
+                errorCount++;
+                console.error(`Error uploading ${file.name}:`, error);
+            }
+        }
+
+        // Reset UI
+        uploadProgress.style.display = 'none';
+        selectedFilesDiv.style.display = 'none';
+        selectedFiles = [];
+        uploadBtn.disabled = true;
+        fileInput.value = '';
+
+        // Show results
+        if (successCount > 0) {
+            showAlert(`${successCount} file(s) uploaded successfully`, 'success');
+            loadUserFiles();
+            loadUserData();
+        }
+        if (errorCount > 0) {
+            showAlert(`${errorCount} file(s) failed to upload`, 'danger');
+        }
+
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('uploadModal'));
+        if (modal) modal.hide();
+    }
+}
+
+// Remove file from selection
+function removeFile(index) {
+    selectedFiles.splice(index, 1);
+    if (selectedFiles.length === 0) {
+        document.getElementById('selectedFiles').style.display = 'none';
+        document.getElementById('uploadBtn').disabled = true;
+    } else {
+        setupFileUpload(); // Re-setup to refresh display
+    }
+}
+
 // Load data on page load
 document.addEventListener('DOMContentLoaded', function() {
     loadUserData();
     loadUserFiles();
+    setupFileUpload();
 });
 
 // Make functions globally available
@@ -429,3 +598,4 @@ window.deleteFile = deleteFile;
 window.downloadFile = downloadFile;
 window.viewFile = viewFile;
 window.refreshFiles = refreshFiles;
+window.removeFile = removeFile;

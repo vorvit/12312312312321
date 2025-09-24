@@ -9,6 +9,7 @@ from app.database import Base
 # Import models to populate Base.metadata
 from app.models import user as _user_model  # noqa: F401
 from app.models import password_reset as _pwd_model  # noqa: F401
+from app.models import file as _file_model  # noqa: F401
 
 from alembic import context
 

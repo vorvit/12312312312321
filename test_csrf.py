@@ -1,38 +1,32 @@
-#!/usr/bin/env python3
-
 import requests
 import json
 
-# Получаем CSRF токен
-response = requests.get("http://localhost:8000/login")
-csrf_token = None
-for cookie in response.cookies:
-    if cookie.name == 'csrf_token':
-        csrf_token = cookie.value
-        break
+# Get CSRF token
+response = requests.get("http://localhost:8000/auth/csrf")
+print("CSRF response:", response.status_code)
+print("CSRF data:", response.json())
 
-print(f"CSRF Token: {csrf_token}")
-
-if csrf_token:
-    # Пробуем войти с CSRF токеном
+if response.status_code == 200:
+    data = response.json()
+    csrf_token = data.get('csrf_token')
+    print(f"CSRF Token: {csrf_token}")
+    
+    # Test login with CSRF
+    login_data = {
+        "email": "vorvit@bk.ru",
+        "password": "password123"
+    }
+    
     headers = {
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': csrf_token
+        "X-CSRF-Token": csrf_token,
+        "Content-Type": "application/json"
     }
     
-    data = {
-        'email': 'vorvit@bk.ru',
-        'password': '123qwerty'
-    }
+    # Set cookies
+    cookies = response.cookies
     
-    response = requests.post(
-        "http://localhost:8000/auth/login",
-        headers=headers,
-        json=data,
-        cookies=response.cookies
-    )
-    
-    print(f"Status: {response.status_code}")
-    print(f"Response: {response.text}")
+    login_response = requests.post("http://localhost:8000/auth/login", json=login_data, headers=headers, cookies=cookies)
+    print("Login response:", login_response.status_code)
+    print("Login data:", login_response.json())
 else:
-    print("CSRF token not found")
+    print("CSRF token request failed")

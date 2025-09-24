@@ -24,6 +24,7 @@ from app.schemas import (
 from app.storage import MinIOClient
 from app.email.email_service import email_service
 from app.models.password_reset import PasswordResetToken
+from app.models.file import File as FileModel
 from app.auth.oauth_service import OAuthService
 from app.services.health_check import HealthCheckService
 from app.logging.logger import logger
@@ -1019,6 +1020,18 @@ async def upload_file(
         success = storage.upload_user_file(current_user.id, safe_name, file_data, content_type)
         
         if success:
+            # Add file record to database
+            file_record = FileModel(
+                user_id=current_user.id,
+                filename=safe_name,
+                original_filename=original_name,
+                file_size=size_bytes,
+                content_type=content_type,
+                storage_path=f"user_{current_user.id}/{safe_name}",
+                is_public=False
+            )
+            db.add(file_record)
+            
             # Update user storage usage
             new_usage = storage.get_user_usage(current_user.id)
             logger.log_file_operation(f"Обновление used_storage: {current_user.used_storage} -> {new_usage}", current_user.id, file.filename, "UPDATE")
@@ -1056,8 +1069,23 @@ async def list_files(current_user: User = Depends(require_current_user)):
         cache_key = f"files:list:{current_user.id}"
         files = cache.get(cache_key)
         if files is None:
-            storage = StorageService()
-            files = storage.list_user_files(current_user.id)
+            # Get files from database
+            db = next(get_db())
+            try:
+                db_files = db.query(FileModel).filter(FileModel.user_id == current_user.id).all()
+                files = []
+                for file in db_files:
+                    files.append({
+                        "id": file.id,
+                        "name": file.filename,
+                        "original_name": file.original_filename,
+                        "size": file.file_size,
+                        "content_type": file.content_type,
+                        "created_at": file.created_at.isoformat() if file.created_at else None,
+                        "is_public": file.is_public
+                    })
+            finally:
+                db.close()
             cache.set(cache_key, files, expire=60)
         logger.log_file_operation(f"Запрос списка файлов", current_user.id, "", "LIST")
         return api_ok(files)
@@ -1228,6 +1256,14 @@ async def delete_file(
         success = storage.delete_user_file(current_user.id, filename)
         
         if success:
+            # Delete file record from database
+            file_record = db.query(FileModel).filter(
+                FileModel.user_id == current_user.id,
+                FileModel.filename == filename
+            ).first()
+            if file_record:
+                db.delete(file_record)
+            
             # Update user storage usage
             new_usage = storage.get_user_usage(current_user.id)
             

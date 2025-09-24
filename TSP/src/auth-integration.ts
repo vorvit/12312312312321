@@ -84,11 +84,14 @@ export class AuthIntegration {
       });
 
       if (response.ok) {
-        const files = await response.json();
+        const responseData = await response.json();
+        // Handle API response wrapper
+        const files = responseData.data || responseData;
+        
         this.authFiles = files.map((file: any) => ({
           name: file.name,
           size: file.size,
-          url: `${this.authBaseUrl}/files/download/${file.name}`,
+          url: `${this.authBaseUrl}/api/files/download/${file.name}`,
           is_ifc: file.name.toLowerCase().endsWith('.ifc') || 
                   file.name.toLowerCase().endsWith('.ifcxml') || 
                   file.name.toLowerCase().endsWith('.ifczip')

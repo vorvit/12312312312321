@@ -1,38 +1,28 @@
-#!/usr/bin/env python3
-
 import requests
 import json
 
-# Получаем CSRF токен
-response = requests.get("http://localhost:8000/login")
-csrf_token = None
-for cookie in response.cookies:
-    if cookie.name == 'csrf_token':
-        csrf_token = cookie.value
-        break
+# Test login with new user
+login_data = {
+    "email": "newuser@test.com",
+    "password": "password123"
+}
 
-print(f"CSRF Token: {csrf_token}")
+response = requests.post("http://localhost:8000/auth/login", json=login_data)
+print("Login response:", response.status_code)
+print("Login data:", response.json())
 
-if csrf_token:
-    # Пробуем войти с новым пользователем
-    headers = {
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': csrf_token
-    }
-    
-    data = {
-        'email': 'test@test.com',
-        'password': 'test123'
-    }
-    
-    response = requests.post(
-        "http://localhost:8000/auth/login",
-        headers=headers,
-        json=data,
-        cookies=response.cookies
-    )
-    
-    print(f"Status: {response.status_code}")
-    print(f"Response: {response.text}")
+if response.status_code == 200:
+    data = response.json()
+    if data.get('access_token'):
+        token = data['access_token']
+        print(f"Token: {token[:20]}...")
+        
+        # Test files API
+        headers = {"Authorization": f"Bearer {token}"}
+        files_response = requests.get("http://localhost:8000/api/files", headers=headers)
+        print("Files response:", files_response.status_code)
+        print("Files data:", files_response.json())
+    else:
+        print("No access token in response")
 else:
-    print("CSRF token not found")
+    print("Login failed")

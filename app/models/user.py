@@ -30,6 +30,7 @@ class User(Base):
     
     # Relationships
     password_reset_tokens = relationship("PasswordResetToken", back_populates="user")
+    files = relationship("File", back_populates="user")
     
     def __repr__(self):
         return f"<User(id={self.id}, username='{self.username}', email='{self.email}')>"
