@@ -145,29 +145,6 @@ export class AuthIntegration {
     }
   }
 
-  /**
-   * Показать конкретную модель в сцене
-   */
-  showModel(fragments: any, modelId: string): void {
-    try {
-      // Сначала скрываем все модели
-      for (const [id, model] of fragments.list) {
-        model.visible = false;
-      }
-      
-      // Показываем только нужную модель
-      for (const [id, model] of fragments.list) {
-        if (id === modelId) {
-          model.visible = true;
-          break;
-        }
-      }
-      
-      console.log(`Model ${modelId} is now visible`);
-    } catch (error) {
-      console.error(`Error showing model ${modelId}:`, error);
-    }
-  }
 
   /**
    * Получить список всех загруженных моделей

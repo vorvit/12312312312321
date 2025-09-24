@@ -287,6 +287,91 @@ if (fileFromUrl) {
   }));
 }
 
+// Create user panel component
+let [userPanel] = BUI.Component.create(userPanelTemplate, {
+  user: null,
+  isAuthenticated: false,
+  showUserMenu: false,
+});
+
+// Create file browser component
+let [fileBrowser] = BUI.Component.create(fileBrowserTemplate, {
+  files: [],
+  selectedFile: null,
+  searchTerm: "",
+  isLoading: false,
+});
+
+// App Grid Setup
+type AppLayouts = ["App"];
+
+type Sidebar = {
+  name: "sidebar";
+  state: TEMPLATES.GridSidebarState;
+};
+
+type ContentGrid = { name: "contentGrid"; state: TEMPLATES.ContentGridState };
+
+type AppGridElements = [Sidebar, ContentGrid];
+
+const app = document.getElementById("app") as BUI.Grid<
+  AppLayouts,
+  AppGridElements
+>;
+
+app.elements = {
+  sidebar: {
+    template: TEMPLATES.gridSidebarTemplate,
+    initialState: {
+      grid: contentGrid,
+      compact: true,
+      layoutIcons: contentGridIcons,
+    },
+  },
+  contentGrid,
+};
+
+contentGrid.addEventListener("layoutchange", () =>
+  app.updateComponent.sidebar(),
+);
+
+app.layouts = {
+  App: {
+    template: `
+      "userPanel sidebar contentGrid" 1fr
+      /auto auto 1fr
+    `,
+  },
+};
+
+app.layout = "App";
+
+// Add user panel to the app
+const userPanelContainer = document.createElement('div');
+userPanelContainer.style.cssText = `
+  display: flex; 
+  align-items: center; 
+  justify-content: flex-end; 
+  padding: 0.5rem 1rem; 
+  background: #1a1d23; 
+  border-bottom: 1px solid #404040;
+`;
+userPanelContainer.appendChild(userPanel);
+
+// Add file browser to sidebar
+let sidebarElement = app.querySelector('[name="sidebar"]') as HTMLElement;
+if (sidebarElement) {
+  sidebarElement.style.cssText = `
+    display: flex; 
+    flex-direction: column; 
+    height: 100%;
+  `;
+  sidebarElement.appendChild(fileBrowser);
+}
+
+// Insert user panel at the top
+app.insertBefore(userPanelContainer, app.firstChild);
+
 // Initialize auth and load user files
 let isAuthenticated = false;
 let userFiles: any[] = [];
@@ -352,91 +437,6 @@ async function initializeAuth() {
     }
   }
 }
-
-// App Grid Setup
-type AppLayouts = ["App"];
-
-type Sidebar = {
-  name: "sidebar";
-  state: TEMPLATES.GridSidebarState;
-};
-
-type ContentGrid = { name: "contentGrid"; state: TEMPLATES.ContentGridState };
-
-type AppGridElements = [Sidebar, ContentGrid];
-
-const app = document.getElementById("app") as BUI.Grid<
-  AppLayouts,
-  AppGridElements
->;
-
-// Create user panel component
-let [userPanel] = BUI.Component.create(userPanelTemplate, {
-  user: null,
-  isAuthenticated: false,
-  showUserMenu: false,
-});
-
-// Create file browser component
-let [fileBrowser] = BUI.Component.create(fileBrowserTemplate, {
-  files: [],
-  selectedFile: null,
-  searchTerm: "",
-  isLoading: false,
-});
-
-app.elements = {
-  sidebar: {
-    template: TEMPLATES.gridSidebarTemplate,
-    initialState: {
-      grid: contentGrid,
-      compact: true,
-      layoutIcons: contentGridIcons,
-    },
-  },
-  contentGrid,
-};
-
-contentGrid.addEventListener("layoutchange", () =>
-  app.updateComponent.sidebar(),
-);
-
-app.layouts = {
-  App: {
-    template: `
-      "userPanel sidebar contentGrid" 1fr
-      /auto auto 1fr
-    `,
-  },
-};
-
-app.layout = "App";
-
-// Add user panel to the app
-const userPanelContainer = document.createElement('div');
-userPanelContainer.style.cssText = `
-  display: flex; 
-  align-items: center; 
-  justify-content: flex-end; 
-  padding: 0.5rem 1rem; 
-  background: #1a1d23; 
-  border-bottom: 1px solid #404040;
-`;
-userPanelContainer.appendChild(userPanel);
-
-// Add file browser to sidebar
-let sidebarElement = app.querySelector('[name="sidebar"]') as HTMLElement;
-if (sidebarElement) {
-  sidebarElement.style.cssText = `
-    display: flex; 
-    flex-direction: column; 
-    height: 100%;
-  `;
-  sidebarElement.appendChild(fileBrowser);
-}
-
-// Insert user panel at the top
-app.insertBefore(userPanelContainer, app.firstChild);
 
 // Initialize auth after components are created
 await initializeAuth();
