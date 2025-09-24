@@ -1,0 +1,511 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - IFC Auth Service{% endblock %}
+
+{% block body_class %}dashboard-page{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-tachometer-alt me-2"></i>Dashboard</h1>
+            <div class="text-muted">
+                <i class="fas fa-clock me-1"></i>
+                <span id="currentTime"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white metric-card" style="cursor: pointer;" onclick="showStorageDetails()">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">Storage Used</h4>
+                        <h2 id="storageUsed">0 MB</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-hdd fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-success text-white metric-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">Storage Quota</h4>
+                        <h2 id="storageQuota">1 GB</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-database fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-info text-white metric-card" style="cursor: pointer;" onclick="openMyFiles()">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">Files</h4>
+                        <h2 id="fileCount">0</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-file fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-warning text-white metric-card" style="cursor: pointer;" onclick="showLoginHistory()">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">Last Login</h4>
+                        <h6 id="lastLogin" class="value-large">Loading...</h6>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-sign-in-alt fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-success text-white metric-card" style="cursor: pointer;" onclick="showRecentActivity()">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title">Recent Activity</h4>
+                        <div id="recentActivityCard" class="small">
+                            <div class="text-white-50">Loading...</div>
+                        </div>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-chart-line fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <button class="btn btn-primary w-100" onclick="openUploadModal()">
+                            <i class="fas fa-upload me-2"></i>Upload Files
+                        </button>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <button class="btn btn-info w-100" onclick="openMyFiles()">
+                            <i class="fas fa-folder-open me-2"></i>My Files
+                        </button>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <button class="btn btn-success w-100" onclick="editProfile()">
+                            <i class="fas fa-user-edit me-2"></i>Edit Profile
+                        </button>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <button class="btn btn-warning w-100" onclick="showStorageDetails()">
+                            <i class="fas fa-chart-pie me-2"></i>Storage Details
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-bolt me-2"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3 d-grid">
+                        <button class="btn btn-outline-primary" onclick="uploadFile()">
+                            <i class="fas fa-upload me-2"></i>Upload IFC File
+                        </button>
+                    </div>
+                    <div class="col-md-3 d-grid">
+                        <button class="btn btn-outline-success" onclick="viewFiles()">
+                            <i class="fas fa-folder-open me-2"></i>View Files
+                        </button>
+                    </div>
+                    <div class="col-md-3 d-grid">
+                        <button class="btn btn-outline-info" onclick="openIFCViewer()">
+                            <i class="fas fa-cube me-2"></i>IFC Viewer
+                        </button>
+                    </div>
+                    <div class="col-md-3 d-grid">
+                        <button class="btn btn-outline-warning" onclick="editProfile()">
+                            <i class="fas fa-user-edit me-2"></i>Edit Profile
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header storage-usage-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Storage Usage
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="progress mb-3" style="height: 25px;">
+                    <div id="storageProgress" class="progress-bar" role="progressbar" style="width: 0%">
+                        <span id="storagePercent">0%</span>
+                    </div>
+                </div>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <small class="text-muted">Used: <span id="usedStorage">0 MB</span></small>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">Available: <span id="availableStorage">1 GB</span></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header activity-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-history me-2"></i>Recent Activity
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="activityList">
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                        <p>No recent activity</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- File Upload Modal -->
+<div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="uploadModalLabel">
+                    <i class="fas fa-upload me-2"></i>Upload IFC File
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- File Upload Area -->
+                <div class="file-upload-area" id="fileUploadArea">
+                    <div class="upload-content">
+                        <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                        <h5>Drag & Drop IFC files here</h5>
+                        <p class="text-muted">or click to browse files</p>
+                        <small class="text-muted">Supported formats: .ifc, .ifcxml, .ifczip</small>
+                    </div>
+                </div>
+                
+                <!-- File Input (hidden) -->
+                <input type="file" id="fileInput" accept=".ifc,.ifcxml,.ifczip" multiple style="display: none;">
+                
+                <!-- Selected Files List -->
+                <div id="selectedFiles" class="mt-3" style="display: none;">
+                    <h6>Selected Files:</h6>
+                    <div id="filesList"></div>
+                </div>
+                
+                <!-- Upload Progress -->
+                <div id="uploadProgress" class="mt-3" style="display: none;">
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <small class="text-muted" id="uploadStatus">Preparing upload...</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="uploadBtn" onclick="startUpload()" disabled>
+                    <i class="fas fa-upload me-2"></i>Upload Files
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Files Browser Modal -->
+<div class="modal fade" id="filesModal" tabindex="-1" aria-labelledby="filesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="filesModalLabel">
+                    <i class="fas fa-folder-open me-2"></i>My Files
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Files List -->
+                <div id="userFilesList">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading files...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-outline-primary" onclick="openUploadModal()">
+                    <i class="fas fa-upload me-2"></i>Upload More
+                </button>
+                <button type="button" class="btn btn-primary" onclick="refreshFiles()">
+                    <i class="fas fa-sync me-2"></i>Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Login History Modal -->
+<div class="modal fade" id="loginHistoryModal" tabindex="-1" aria-labelledby="loginHistoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="loginHistoryModalLabel">
+                    <i class="fas fa-history me-2"></i>Login History
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="loginHistoryList">
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-spinner fa-spin me-2"></i>Loading login history...
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Storage Details Modal -->
+<div class="modal fade" id="storageDetailsModal" tabindex="-1" aria-labelledby="storageDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="storageDetailsModalLabel">
+                    <i class="fas fa-hdd me-2"></i>Storage Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">Used Storage</h6>
+                                <h3 id="modalUsedStorage">0 MB</h3>
+                                <small class="text-muted">Currently used</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">Available Storage</h6>
+                                <h3 id="modalAvailableStorage">1 GB</h3>
+                                <small class="text-muted">Remaining space</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <h6>Storage Breakdown</h6>
+                    <div class="progress mb-2" style="height: 20px;">
+                        <div id="modalStorageProgress" class="progress-bar" role="progressbar" style="width: 0%">
+                            <span id="modalStoragePercent">0%</span>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <small class="text-muted">Used: <span id="modalUsedStorageText">0 MB</span></small>
+                        <small class="text-muted">Total: <span id="modalTotalStorageText">1 GB</span></small>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="viewFiles()">
+                    <i class="fas fa-folder-open me-2"></i>View Files
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity Modal -->
+<div class="modal fade" id="recentActivityModal" tabindex="-1" aria-labelledby="recentActivityModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="recentActivityModalLabel">
+                    <i class="fas fa-history me-2"></i>Recent Activity
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="recentActivityList">
+                    <div class="text-center py-3">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="loadRecentActivity()">
+                    <i class="fas fa-sync me-2"></i>Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- File Upload Modal -->
+<div class="modal fade" id="uploadFileModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-upload me-2"></i>Upload IFC Files</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="fileUploadArea" class="border border-dashed border-2 rounded p-4 text-center" style="min-height: 200px; cursor: pointer;">
+                    <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                    <h5>Drag & Drop IFC files here</h5>
+                    <p class="text-muted">or click to browse files</p>
+                    <input type="file" id="fileInput" multiple accept=".ifc,.ifcxml,.ifczip" style="display: none;">
+                </div>
+                
+                <div id="selectedFiles" class="mt-3" style="display: none;">
+                    <h6>Selected Files:</h6>
+                    <div id="selectedFilesList"></div>
+                    <div class="mt-3">
+                        <div class="progress">
+                            <div class="progress-bar" id="uploadProgress" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <small id="uploadProgressText" class="text-muted"></small>
+                    </div>
+                    <div class="mt-3">
+                        <button class="btn btn-success" id="uploadButton" onclick="startUpload()">
+                            <i class="fas fa-upload me-1"></i>Upload Files
+                        </button>
+                        <button class="btn btn-secondary ms-2" onclick="clearSelectedFiles()">
+                            <i class="fas fa-times me-1"></i>Clear All
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Files Modal -->
+<div class="modal fade" id="viewFilesModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-folder-open me-2"></i>My Files</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6>Your IFC Files</h6>
+                    <button class="btn btn-primary btn-sm" onclick="openUploadModal()">
+                        <i class="fas fa-plus me-1"></i>Upload More
+                    </button>
+                </div>
+                <div id="userFilesList" class="list-group">
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-spinner fa-spin me-2"></i>Loading files...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div class="modal fade" id="editProfileModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-user-edit me-2"></i>Edit Profile</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editProfileForm">
+                    <div class="mb-3">
+                        <label for="editUsername" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="editUsername" value="" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editEmail" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="editEmail" value="" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editFullName" class="form-label">Full Name</label>
+                        <input type="text" class="form-control" id="editFullName" value="">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveProfile()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/dashboard.js"></script>
+{% endblock %}

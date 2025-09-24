@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Users - IFC Auth Service{% endblock %}
+
+{% block body_class %}admin-page{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-users me-2"></i>Manage Users</h2>
+            <button class="btn btn-primary" onclick="createUser()">
+                <i class="fas fa-user-plus me-2"></i>Create User
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-users-cog me-2"></i>User Management
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Last Login</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <tr>
+                                <td colspan="7" class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Load users on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadUsers();
+});
+
+async function loadUsers() {
+    try {
+        const response = await apiRequest('/api/admin/users');
+        
+        if (response.ok) {
+            const data = await response.json();
+            displayUsers(data.users || []);
+        } else {
+            throw new Error('Failed to load users');
+        }
+    } catch (error) {
+        console.error('Error loading users:', error);
+        document.getElementById('usersTableBody').innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center text-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error loading users: ${error.message}
+                </td>
+            </tr>
+        `;
+    }
+}
+
+function displayUsers(users) {
+    const container = document.getElementById('usersTableBody');
+    if (!container) return;
+    
+    if (users.length === 0) {
+        container.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center text-muted">
+                    <i class="fas fa-users fa-2x mb-2"></i>
+                    <div>No users found</div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    let html = '';
+    users.forEach(user => {
+        const lastLogin = user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never';
+        const statusBadge = user.is_active ? 
+            '<span class="badge bg-success">Active</span>' : 
+            '<span class="badge bg-danger">Inactive</span>';
+        const roleBadge = user.is_admin ? 
+            '<span class="badge bg-warning">Admin</span>' : 
+            '<span class="badge bg-info">User</span>';
+        
+        html += `
+            <tr>
+                <td>${user.id}</td>
+                <td>${user.full_name || 'N/A'}</td>
+                <td>${user.email}</td>
+                <td>${roleBadge}</td>
+                <td>${statusBadge}</td>
+                <td>${lastLogin}</td>
+                <td>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button class="btn btn-outline-primary" onclick="editUser(${user.id})" title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-outline-warning" onclick="toggleUser(${user.id})" title="Toggle Status">
+                            <i class="fas fa-toggle-${user.is_active ? 'on' : 'off'}"></i>
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="deleteUser(${user.id})" title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function createUser() {
+    window.location.href = '/admin';
+}
+
+function editUser(userId) {
+    window.location.href = `/admin?edit=${userId}`;
+}
+
+async function toggleUser(userId) {
+    if (!confirm('Are you sure you want to toggle this user\'s status?')) {
+        return;
+    }
+    
+    try {
+            const response = await apiRequest(`/api/admin/users/${userId}/toggle`, { method: 'POST' });
+        
+        if (response.ok) {
+            loadUsers(); // Refresh the list
+        } else {
+            throw new Error('Toggle failed');
+        }
+    } catch (error) {
+        console.error('Error toggling user:', error);
+        alert('Error toggling user: ' + error.message);
+    }
+}
+
+async function deleteUser(userId) {
+    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+        return;
+    }
+    
+    try {
+            const response = await apiRequest(`/api/admin/users/${userId}/delete`, { method: 'DELETE' });
+        
+        if (response.ok) {
+            loadUsers(); // Refresh the list
+        } else {
+            throw new Error('Delete failed');
+        }
+    } catch (error) {
+        console.error('Error deleting user:', error);
+        alert('Error deleting user: ' + error.message);
+    }
+}
+</script>
+{% endblock %}

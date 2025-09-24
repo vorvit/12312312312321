@@ -1,0 +1,556 @@
+// Update current time
+function updateTime() {
+    const now = new Date();
+    const el = document.getElementById('currentTime');
+    if (el) el.textContent = now.toLocaleString();
+}
+setInterval(updateTime, 1000);
+updateTime();
+
+// Load user data
+async function loadUserData() {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+        window.location.href = '/login';
+        return;
+    }
+
+    try {
+        const response = await apiRequest('/users/me');
+        if (response && response.ok) {
+            const user = await response.json();
+            updateDashboard(user);
+        } else {
+            localStorage.removeItem('access_token');
+            window.location.href = '/login';
+        }
+    } catch (error) {
+        console.error('Dashboard: Error loading user data:', error);
+        localStorage.removeItem('access_token');
+        window.location.href = '/login';
+    }
+}
+
+function updateDashboard(user) {
+    const usedMB = Math.round(user.used_storage / (1024 * 1024));
+    const quotaGB = Math.round(user.storage_quota / (1024 * 1024 * 1024));
+    const usedPercent = Math.round((user.used_storage / user.storage_quota) * 100);
+
+    const storageUsed = document.getElementById('storageUsed');
+    const storageQuota = document.getElementById('storageQuota');
+    const usedStorage = document.getElementById('usedStorage');
+    const availableStorage = document.getElementById('availableStorage');
+    if (storageUsed) storageUsed.textContent = `${usedMB} MB`;
+    if (storageQuota) storageQuota.textContent = `${quotaGB} GB`;
+    if (usedStorage) usedStorage.textContent = `${usedMB} MB`;
+    if (availableStorage) availableStorage.textContent = `${quotaGB - Math.round(usedMB / 1024)} GB`;
+
+    const progressBar = document.getElementById('storageProgress');
+    if (progressBar) {
+        progressBar.style.width = `${usedPercent}%`;
+        progressBar.setAttribute('aria-valuenow', usedPercent);
+    }
+
+    const lastLogin = document.getElementById('lastLogin');
+    if (lastLogin) {
+        if (user.last_login) {
+            const loginDate = new Date(user.last_login);
+            lastLogin.textContent = loginDate.toLocaleString();
+        } else {
+            lastLogin.textContent = 'Today ' + new Date().toLocaleTimeString();
+        }
+    }
+
+    const username = document.getElementById('username');
+    if (username) username.textContent = user.username || user.email;
+
+    const userEmail = document.getElementById('userEmail');
+    if (userEmail) userEmail.textContent = user.email;
+}
+
+// Show login history
+function showLoginHistory() {
+    const modal = new bootstrap.Modal(document.getElementById('loginHistoryModal'));
+    modal.show();
+    loadLoginHistory();
+}
+
+async function loadLoginHistory() {
+    try {
+        const response = await apiRequest('/users/login-history');
+        if (response && response.ok) {
+            const data = await response.json();
+            displayLoginHistory(data);
+        }
+    } catch (error) {
+        console.error('Error loading login history:', error);
+    }
+}
+
+function displayLoginHistory(data) {
+    const container = document.getElementById('loginHistoryList');
+    if (!container) return;
+
+    if (data.length === 0) {
+        container.innerHTML = '<div class="text-muted">No login history available</div>';
+        return;
+    }
+
+    let html = '';
+    data.forEach(entry => {
+        const date = new Date(entry.timestamp);
+        html += `
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                <div>
+                    <div class="fw-bold">${entry.ip_address}</div>
+                    <small class="text-muted">${entry.user_agent}</small>
+                </div>
+                <small class="text-muted">${date.toLocaleString()}</small>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
+}
+
+// Show storage details
+function showStorageDetails() {
+    const modal = new bootstrap.Modal(document.getElementById('storageDetailsModal'));
+    modal.show();
+}
+
+// Show recent activity
+function showRecentActivity() {
+    const modal = new bootstrap.Modal(document.getElementById('recentActivityModal'));
+    modal.show();
+    loadRecentActivity();
+}
+
+async function loadRecentActivity() {
+    try {
+        const response = await apiRequest('/users/activity');
+        if (response && response.ok) {
+            const data = await response.json();
+            displayRecentActivity(data);
+        }
+    } catch (error) {
+        console.error('Error loading recent activity:', error);
+    }
+}
+
+function displayRecentActivity(data) {
+    const container = document.getElementById('recentActivityList');
+    if (!container) return;
+
+    if (data.length === 0) {
+        container.innerHTML = '<div class="text-muted">No recent activity</div>';
+        return;
+    }
+
+    let html = '';
+    data.forEach(activity => {
+        const date = new Date(activity.timestamp);
+        html += `
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                <div>
+                    <div class="fw-bold">${activity.action}</div>
+                    <small class="text-muted">${activity.details}</small>
+                </div>
+                <small class="text-muted">${date.toLocaleString()}</small>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
+}
+
+// Load recent activity for card display
+async function loadRecentActivityForCard() {
+    try {
+        const response = await apiRequest('/users/activity');
+        if (response && response.ok) {
+            const data = await response.json();
+            displayRecentActivityForCard(data);
+        }
+    } catch (error) {
+        console.error('Error loading recent activity:', error);
+    }
+}
+
+function displayRecentActivityForCard(data) {
+    const container = document.getElementById('recentActivityCard');
+    if (!container) return;
+
+    if (data.length === 0) {
+        container.innerHTML = '<div class="text-muted">No recent activity</div>';
+        return;
+    }
+
+    let html = '';
+    const recentActivities = data.slice(0, 3); // Show only last 3 activities
+    recentActivities.forEach(activity => {
+        const date = new Date(activity.timestamp);
+        html += `
+            <div class="d-flex justify-content-between align-items-center py-1">
+                <div>
+                    <div class="fw-bold small">${activity.action}</div>
+                    <small class="text-muted">${activity.details}</small>
+                </div>
+                <small class="text-muted">${date.toLocaleDateString()}</small>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
+}
+
+// File upload functionality
+let selectedFiles = [];
+
+function setupFileUpload() {
+    const uploadArea = document.getElementById('fileUploadArea');
+    const fileInput = document.getElementById('fileInput');
+    
+    // Drag and drop functionality
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+    
+    uploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+    });
+    
+    uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        handleFiles(e.dataTransfer.files);
+    });
+    
+    uploadArea.addEventListener('click', function() {
+        fileInput.click();
+    });
+    
+    fileInput.addEventListener('change', function() {
+        handleFiles(this.files);
+    });
+}
+
+function handleFiles(files) {
+    const validFiles = Array.from(files).filter(file => {
+        const extension = file.name.toLowerCase().split('.').pop();
+        return ['ifc', 'ifcxml', 'ifczip'].includes(extension);
+    });
+    
+    if (validFiles.length === 0) {
+        showAlert('Please select valid IFC files (.ifc, .ifcxml, .ifczip)', 'warning');
+        return;
+    }
+    
+    selectedFiles = [...selectedFiles, ...validFiles];
+    updateSelectedFilesDisplay();
+}
+
+function updateSelectedFilesDisplay() {
+    const filesList = document.getElementById('selectedFilesList');
+    const selectedFilesDiv = document.getElementById('selectedFiles');
+    
+    if (!filesList || !selectedFilesDiv) return;
+    
+    let html = '';
+    selectedFiles.forEach((file, index) => {
+        html += `
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                <div>
+                    <div class="fw-bold">${file.name}</div>
+                    <small class="text-muted">${formatFileSize(file.size)}</small>
+                </div>
+                <button class="btn btn-sm btn-outline-danger" onclick="removeFile(${index})">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+    });
+    
+    filesList.innerHTML = html;
+    selectedFilesDiv.style.display = 'block';
+}
+
+function removeFile(index) {
+    selectedFiles.splice(index, 1);
+    if (selectedFiles.length === 0) {
+        document.getElementById('selectedFiles').style.display = 'none';
+    } else {
+        updateSelectedFilesDisplay();
+    }
+}
+
+function clearSelectedFiles() {
+    selectedFiles = [];
+    document.getElementById('selectedFiles').style.display = 'none';
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+async function startUpload() {
+    if (selectedFiles.length === 0) return;
+    
+    const progressBar = document.getElementById('uploadProgress');
+    const progressText = document.getElementById('uploadProgressText');
+    const uploadButton = document.getElementById('uploadButton');
+    
+    uploadButton.disabled = true;
+    uploadButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+    
+    let totalSize = selectedFiles.reduce((sum, file) => sum + file.size, 0);
+    let uploadedSize = 0;
+    
+    const filesToUpload = [...selectedFiles];
+    
+    for (let i = 0; i < filesToUpload.length; i++) {
+        const file = filesToUpload[i];
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        try {
+            const response = await apiRequest('/files/upload', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response && response.ok) {
+                uploadedSize += file.size;
+                const progress = Math.round((uploadedSize / totalSize) * 100);
+                progressBar.style.width = `${progress}%`;
+                progressText.textContent = `Uploading ${file.name}... ${progress}%`;
+            } else {
+                throw new Error(`Failed to upload ${file.name}`);
+            }
+        } catch (error) {
+            console.error(`Error uploading ${file.name}:`, error);
+            showAlert(`Failed to upload ${file.name}: ${error.message}`, 'danger');
+            break;
+        }
+    }
+    
+    progressBar.style.width = '100%';
+    progressText.textContent = 'Upload complete!';
+    
+    setTimeout(() => {
+        progressBar.style.width = '0%';
+        progressText.textContent = '';
+        uploadButton.disabled = false;
+        uploadButton.innerHTML = '<i class="fas fa-upload"></i> Upload Files';
+        selectedFiles = [];
+        document.getElementById('selectedFiles').style.display = 'none';
+        loadUserFiles();
+        loadUserData();
+    }, 2000);
+}
+
+// File management functions
+async function loadUserFiles() {
+    try {
+        const response = await apiRequest('/api/files');
+        if (response && response.ok) {
+            const body = await response.json();
+            displayUserFiles(body.data || body);
+        }
+    } catch (error) {
+        console.error('Error loading user files:', error);
+    }
+}
+
+function displayUserFiles(files) {
+    const container = document.getElementById('userFilesList');
+    if (!container) return;
+    
+    const fileCount = document.getElementById('fileCount');
+    if (fileCount) fileCount.textContent = files.length;
+    
+    if (files.length === 0) {
+        container.innerHTML = '<div class="text-muted">No files uploaded yet</div>';
+        return;
+    }
+    
+    let html = '';
+    files.forEach(file => {
+        const size = formatFileSize(file.size);
+        const date = new Date(file.last_modified).toLocaleDateString();
+        html += `
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                <div>
+                    <div class="fw-bold">${file.name}</div>
+                    <small class="text-muted">${size} • ${date}</small>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-sm btn-outline-primary" onclick="downloadFile('${file.name}')" title="Download">
+                        <i class="fas fa-download"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-info" onclick="viewFile('${file.name}')" title="View">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteFile('${file.name}')" title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    container.innerHTML = html;
+}
+
+function viewFiles() {
+    const modal = new bootstrap.Modal(document.getElementById('viewFilesModal'));
+    modal.show();
+    loadUserFiles();
+}
+
+function openMyFiles() { viewFiles(); }
+
+function openUploadModal() {
+    // Close view files modal if open
+    const viewModal = bootstrap.Modal.getInstance(document.getElementById('viewFilesModal'));
+    if (viewModal) viewModal.hide();
+    
+    // Open upload modal
+    const uploadModal = new bootstrap.Modal(document.getElementById('uploadFileModal'));
+    uploadModal.show();
+}
+
+async function deleteFile(filename) {
+    if (!confirm(`Are you sure you want to delete ${filename}?`)) return;
+    try {
+        const response = await apiRequest(`/files/delete/${filename}`, { method: 'DELETE' });
+        if (response && response.ok) {
+            showAlert(`${filename} deleted successfully`, 'success');
+            loadUserFiles();
+            loadUserData();
+        } else {
+            showAlert(`Failed to delete ${filename}`, 'danger');
+        }
+    } catch (error) {
+        console.error('Error deleting file:', error);
+        showAlert(`Failed to delete ${filename}: ${error.message}`, 'danger');
+    }
+}
+
+async function downloadFile(filename) {
+    try {
+        const response = await apiRequest(`/files/download/${filename}`);
+        if (response && response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } else {
+            showAlert(`Failed to download ${filename}`, 'danger');
+        }
+    } catch (error) {
+        console.error('Error downloading file:', error);
+        showAlert(`Failed to download ${filename}: ${error.message}`, 'danger');
+    }
+}
+
+function viewFile(filename) {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+        alert('Please login first');
+        return;
+    }
+    
+    const url = `http://localhost:5175?token=${token}&file=${encodeURIComponent(filename)}`;
+    window.open(url, '_blank');
+}
+
+function refreshFiles() {
+    loadUserFiles();
+    loadUserData();
+}
+
+// Profile management
+async function editProfile() {
+    const modal = new bootstrap.Modal(document.getElementById('editProfileModal'));
+    modal.show();
+}
+
+async function saveProfile() {
+    const username = document.getElementById('editUsername').value;
+    const email = document.getElementById('editEmail').value;
+    const fullName = document.getElementById('editFullName').value;
+    
+    try {
+        const response = await apiRequest('/users/me', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                username: username,
+                email: email,
+                full_name: fullName
+            })
+        });
+        
+        if (response && response.ok) {
+            showAlert('Profile updated successfully', 'success');
+            loadUserData();
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editProfileModal'));
+            if (modal) modal.hide();
+        } else {
+            showAlert('Failed to update profile', 'danger');
+        }
+    } catch (error) {
+        console.error('Error updating profile:', error);
+        showAlert(`Failed to update profile: ${error.message}`, 'danger');
+    }
+}
+
+// Utility functions
+function showAlert(message, type = 'info') {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    let container = document.querySelector('.container-fluid') || document.querySelector('.container') || document.body;
+    if (container === document.body) { container.appendChild(alertDiv); }
+    else { container.insertBefore(alertDiv, container.firstChild); }
+    setTimeout(() => { if (alertDiv.parentNode) alertDiv.remove(); }, 5000);
+}
+
+// Load data on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadUserData();
+    loadUserFiles();
+    loadRecentActivityForCard();
+    setupFileUpload();
+});
+
+// Make functions globally available
+window.viewFiles = viewFiles;
+window.openMyFiles = openMyFiles;
+window.openUploadModal = openUploadModal;
+window.showLoginHistory = showLoginHistory;
+window.showStorageDetails = showStorageDetails;
+window.showRecentActivity = showRecentActivity;
+window.editProfile = editProfile;
+window.saveProfile = saveProfile;
+window.startUpload = startUpload;
+window.clearSelectedFiles = clearSelectedFiles;
+window.removeFile = removeFile;
+window.deleteFile = deleteFile;
+window.downloadFile = downloadFile;
+window.viewFile = viewFile;
+window.refreshFiles = refreshFiles;

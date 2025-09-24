@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+
+{% block title %}IFC Viewer - IFC Auth Service{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-cube me-2"></i>IFC Viewer</h2>
+                <div>
+                    <button class="btn btn-outline-secondary me-2" onclick="history.back()">
+                        <i class="fas fa-arrow-left me-2"></i>Back
+                    </button>
+                    <button class="btn btn-primary" onclick="loadUserFiles()">
+                        <i class="fas fa-folder-open me-2"></i>Load Files
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- File Browser -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-folder me-2"></i>File Browser</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <input type="text" class="form-control" id="fileSearch" placeholder="Search files...">
+                    </div>
+                    <div id="fileList" style="max-height: 400px; overflow-y: auto;">
+                        <!-- Files will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3D Viewer -->
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-cube me-2"></i>3D Viewer</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div id="viewerContainer" style="height: 600px; position: relative;">
+                        <div id="loadingSpinner" class="d-flex justify-content-center align-items-center h-100">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                        <div id="viewerPlaceholder" class="d-flex justify-content-center align-items-center h-100 text-muted" style="display: none;">
+                            <div class="text-center">
+                                <i class="fas fa-cube fa-3x mb-3"></i>
+                                <h5>No IFC file selected</h5>
+                                <p>Select a file from the browser to view it in 3D</p>
+                            </div>
+                        </div>
+                        <canvas id="viewerCanvas" style="display: none; width: 100%; height: 100%;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Viewer Controls -->
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-sliders-h me-2"></i>Viewer Controls</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label class="form-label">View Mode</label>
+                            <select class="form-select" id="viewMode">
+                                <option value="solid">Solid</option>
+                                <option value="wireframe">Wireframe</option>
+                                <option value="transparent">Transparent</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Background</label>
+                            <select class="form-select" id="backgroundColor">
+                                <option value="white">White</option>
+                                <option value="black">Black</option>
+                                <option value="gray">Gray</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Lighting</label>
+                            <select class="form-select" id="lighting">
+                                <option value="default">Default</option>
+                                <option value="bright">Bright</option>
+                                <option value="dim">Dim</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Actions</label>
+                            <div class="btn-group w-100">
+                                <button class="btn btn-outline-primary" onclick="resetView()">
+                                    <i class="fas fa-home"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary" onclick="fitToView()">
+                                    <i class="fas fa-expand"></i>
+                                </button>
+                                <button class="btn btn-outline-info" onclick="takeScreenshot()">
+                                    <i class="fas fa-camera"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentFile = null;
+let viewer = null;
+
+// Initialize viewer
+document.addEventListener('DOMContentLoaded', function() {
+    initializeViewer();
+    loadUserFiles();
+    
+    // Check if file parameter is provided in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const fileParam = urlParams.get('file');
+    if (fileParam) {
+        // Load specific file
+        loadFile(fileParam);
+    }
+});
+
+function initializeViewer() {
+    // Placeholder for 3D viewer initialization
+    // This would integrate with a 3D library like Three.js or Babylon.js
+    console.log('IFC Viewer initialized');
+    showPlaceholder();
+}
+
+async function loadUserFiles() {
+    try {
+        const response = await fetch('/files', {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            }
+        });
+        
+        if (response.ok) {
+            const files = await response.json();
+            displayFiles(files);
+        } else {
+            throw new Error('Failed to load files');
+        }
+    } catch (error) {
+        console.error('Error loading files:', error);
+        document.getElementById('fileList').innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Error loading files: ${error.message}
+            </div>
+        `;
+    }
+}
+
+function displayFiles(files) {
+    const fileList = document.getElementById('fileList');
+    
+    if (files.length === 0) {
+        fileList.innerHTML = `
+            <div class="text-center py-3">
+                <i class="fas fa-folder-open fa-2x text-muted mb-2"></i>
+                <p class="text-muted">No IFC files found</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let filesHtml = '';
+    files.forEach(file => {
+        const isIFC = file.name.toLowerCase().endsWith('.ifc') || 
+                     file.name.toLowerCase().endsWith('.ifcxml') || 
+                     file.name.toLowerCase().endsWith('.ifczip');
+        
+        if (isIFC) {
+            filesHtml += `
+                <div class="file-item p-2 border-bottom cursor-pointer" onclick="loadFile('${file.name}')">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-cube text-primary me-2"></i>
+                        <div class="flex-grow-1">
+                            <div class="fw-bold">${file.name}</div>
+                            <small class="text-muted">${formatFileSize(file.size)}</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    });
+    
+    fileList.innerHTML = filesHtml || `
+        <div class="text-center py-3">
+            <i class="fas fa-info-circle fa-2x text-info mb-2"></i>
+            <p class="text-muted">No IFC files found</p>
+        </div>
+    `;
+}
+
+async function loadFile(filename) {
+    try {
+        showLoading();
+        
+        // Simulate file loading
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        currentFile = filename;
+        showViewer();
+        
+        // Here you would load the actual IFC file into the 3D viewer
+        console.log('Loading file:', filename);
+        
+    } catch (error) {
+        console.error('Error loading file:', error);
+        showAlert('Error loading file: ' + error.message, 'danger');
+    }
+}
+
+function showLoading() {
+    document.getElementById('loadingSpinner').style.display = 'flex';
+    document.getElementById('viewerPlaceholder').style.display = 'none';
+    document.getElementById('viewerCanvas').style.display = 'none';
+}
+
+function showPlaceholder() {
+    document.getElementById('loadingSpinner').style.display = 'none';
+    document.getElementById('viewerPlaceholder').style.display = 'flex';
+    document.getElementById('viewerCanvas').style.display = 'none';
+}
+
+function showViewer() {
+    document.getElementById('loadingSpinner').style.display = 'none';
+    document.getElementById('viewerPlaceholder').style.display = 'none';
+    document.getElementById('viewerCanvas').style.display = 'block';
+}
+
+function resetView() {
+    if (viewer) {
+        // Reset camera position
+        console.log('Resetting view');
+    }
+}
+
+function fitToView() {
+    if (viewer) {
+        // Fit model to view
+        console.log('Fitting to view');
+    }
+}
+
+function takeScreenshot() {
+    if (viewer) {
+        // Take screenshot
+        console.log('Taking screenshot');
+        showAlert('Screenshot saved!', 'success');
+    }
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+
+// File search functionality
+document.getElementById('fileSearch').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const fileItems = document.querySelectorAll('.file-item');
+    
+    fileItems.forEach(item => {
+        const fileName = item.textContent.toLowerCase();
+        if (fileName.includes(searchTerm)) {
+            item.style.display = 'block';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+});
+</script>
+
+<style>
+.file-item:hover {
+    background-color: #f8f9fa;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+#viewerContainer {
+    background: linear-gradient(45deg, #f0f0f0 25%, transparent 25%), 
+                linear-gradient(-45deg, #f0f0f0 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #f0f0f0 75%), 
+                linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+}
+</style>
+{% endblock %}

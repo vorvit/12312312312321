@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}System Status - IFC Auth Service{% endblock %}
+
+{% block body_class %}admin-page{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-server me-2"></i>System Status</h2>
+            <button class="btn btn-outline-primary" onclick="refreshStatus()">
+                <i class="fas fa-sync me-2"></i>Refresh
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 col-lg-3 mb-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="fas fa-database fa-2x text-primary mb-2"></i>
+                <h5 class="card-title">Database</h5>
+                <span class="badge bg-success" id="dbStatus">Online</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 col-lg-3 mb-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="fas fa-memory fa-2x text-info mb-2"></i>
+                <h5 class="card-title">Redis Cache</h5>
+                <span class="badge bg-success" id="redisStatus">Online</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 col-lg-3 mb-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="fas fa-hdd fa-2x text-warning mb-2"></i>
+                <h5 class="card-title">MinIO Storage</h5>
+                <span class="badge bg-success" id="minioStatus">Online</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 col-lg-3 mb-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="fas fa-server fa-2x text-secondary mb-2"></i>
+                <h5 class="card-title">PostgreSQL</h5>
+                <span class="badge bg-success" id="postgresStatus">Online</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-line me-2"></i>System Metrics
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-primary" id="totalUsers">-</h4>
+                        <small class="text-muted">Total Users</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success" id="activeUsers">-</h4>
+                        <small class="text-muted">Active Users</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-info" id="totalFiles">-</h4>
+                        <small class="text-muted">Total Files</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-warning" id="storageUsed">-</h4>
+                        <small class="text-muted">Storage Used</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>System Alerts
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="alertsList">
+                    <div class="text-center text-muted">
+                        <i class="fas fa-check-circle fa-2x mb-2"></i>
+                        <p>No alerts at this time</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-tools me-2"></i>System Actions
+                </h5>
+                <small class="text-muted" id="systemMeta"></small>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <button class="btn btn-outline-primary w-100" onclick="openLogsModal()">
+                            <i class="fas fa-file-alt me-2"></i>View Logs
+                        </button>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <button class="btn btn-outline-success w-100" onclick="openBackupModal()">
+                            <i class="fas fa-download me-2"></i>Create Backup
+                        </button>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <button class="btn btn-outline-warning w-100" onclick="clearCache()">
+                            <i class="fas fa-broom me-2"></i>Clear Cache
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/admin-system.js"></script>
+<script>
+</script>
+{% endblock %}

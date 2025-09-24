@@ -1,0 +1,90 @@
+import asyncio
+import aiosmtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from config import settings
+import logging
+
+logger = logging.getLogger(__name__)
+
+class EmailService:
+    def __init__(self):
+        self.smtp_server = settings.MAIL_SERVER
+        self.smtp_port = settings.MAIL_PORT
+        self.username = settings.MAIL_USERNAME
+        self.password = settings.MAIL_PASSWORD
+        self.from_email = settings.MAIL_FROM
+        self.from_name = settings.MAIL_FROM_NAME
+
+    async def send_email(self, to_email: str, subject: str, body: str, is_html: bool = False):
+        """Send email using SMTP"""
+        try:
+            # Create message
+            msg = MIMEMultipart('alternative')
+            msg['From'] = f"{self.from_name} <{self.from_email}>"
+            msg['To'] = to_email
+            msg['Subject'] = subject
+
+            # Add body
+            if is_html:
+                msg.attach(MIMEText(body, 'html'))
+            else:
+                msg.attach(MIMEText(body, 'plain'))
+
+            # Send email
+            await aiosmtplib.send(
+                msg,
+                hostname=self.smtp_server,
+                port=self.smtp_port,
+                username=self.username,
+                password=self.password,
+                use_tls=True
+            )
+            
+            logger.info(f"Email sent successfully to {to_email}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to send email to {to_email}: {str(e)}")
+            return False
+
+    async def send_verification_email(self, to_email: str, token: str):
+        """Send email verification email"""
+        verification_url = f"{settings.BASE_URL}/verify-email?token={token}"
+        
+        subject = "Подтверждение email адреса"
+        body = f"""
+        Здравствуйте!
+        
+        Для подтверждения вашего email адреса перейдите по ссылке:
+        {verification_url}
+        
+        Если вы не регистрировались на нашем сайте, проигнорируйте это письмо.
+        
+        С уважением,
+        Команда IFC Auth Service
+        """
+        
+        return await self.send_email(to_email, subject, body)
+
+    async def send_password_reset_email(self, to_email: str, token: str):
+        """Send password reset email"""
+        reset_url = f"{settings.BASE_URL}/reset-password?token={token}"
+        
+        subject = "Восстановление пароля"
+        body = f"""
+        Здравствуйте!
+        
+        Для восстановления пароля перейдите по ссылке:
+        {reset_url}
+        
+        Если вы не запрашивали восстановление пароля, проигнорируйте это письмо.
+        
+        С уважением,
+        Команда IFC Auth Service
+        """
+        
+        return await self.send_email(to_email, subject, body)
+
+# Create global instance
+email_service = EmailService()
