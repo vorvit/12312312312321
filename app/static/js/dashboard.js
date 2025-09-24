@@ -81,6 +81,8 @@ async function loadLoginHistory() {
         if (response && response.ok) {
             const data = await response.json();
             displayLoginHistory(data);
+        } else {
+            console.error('Failed to load login history:', response.status);
         }
     } catch (error) {
         console.error('Error loading login history:', error);
@@ -89,21 +91,27 @@ async function loadLoginHistory() {
 
 function displayLoginHistory(data) {
     const container = document.getElementById('loginHistoryList');
-    if (!container) return;
-
-    if (data.length === 0) {
+    if (!container) {
+        console.error('Login history container not found');
+        return;
+    }
+    
+    // Handle both array and object responses
+    const historyData = Array.isArray(data) ? data : (data.login_history || data.data || []);
+    
+    if (historyData.length === 0) {
         container.innerHTML = '<div class="text-muted">No login history available</div>';
         return;
     }
 
     let html = '';
-    data.forEach(entry => {
+    historyData.forEach(entry => {
         const date = new Date(entry.timestamp);
         html += `
             <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
                 <div>
-                    <div class="fw-bold">${entry.ip_address}</div>
-                    <small class="text-muted">${entry.user_agent}</small>
+                    <div class="fw-bold">${entry.ip_address || 'Unknown'}</div>
+                    <small class="text-muted">${entry.user_agent || 'Unknown'}</small>
                 </div>
                 <small class="text-muted">${date.toLocaleString()}</small>
             </div>
@@ -127,10 +135,10 @@ function showRecentActivity() {
 
 async function loadRecentActivity() {
     try {
-        const response = await apiRequest('/users/activity');
-        if (response && response.ok) {
-            const data = await response.json();
-            displayRecentActivity(data);
+        // Пока эндпоинт не реализован, показываем заглушку
+        const container = document.getElementById('recentActivityList');
+        if (container) {
+            container.innerHTML = '<div class="text-muted">Activity tracking not implemented yet</div>';
         }
     } catch (error) {
         console.error('Error loading recent activity:', error);
@@ -165,10 +173,10 @@ function displayRecentActivity(data) {
 // Load recent activity for card display
 async function loadRecentActivityForCard() {
     try {
-        const response = await apiRequest('/users/activity');
-        if (response && response.ok) {
-            const data = await response.json();
-            displayRecentActivityForCard(data);
+        // Пока эндпоинт не реализован, показываем заглушку
+        const container = document.getElementById('recentActivityCard');
+        if (container) {
+            container.innerHTML = '<div class="text-muted">No recent activity</div>';
         }
     } catch (error) {
         console.error('Error loading recent activity:', error);
@@ -201,156 +209,7 @@ function displayRecentActivityForCard(data) {
     container.innerHTML = html;
 }
 
-// File upload functionality
-let selectedFiles = [];
 
-function setupFileUpload() {
-    const uploadArea = document.getElementById('fileUploadArea');
-    const fileInput = document.getElementById('fileInput');
-    
-    // Drag and drop functionality
-    uploadArea.addEventListener('dragover', function(e) {
-        e.preventDefault();
-        uploadArea.classList.add('dragover');
-    });
-    
-    uploadArea.addEventListener('dragleave', function(e) {
-        e.preventDefault();
-        uploadArea.classList.remove('dragover');
-    });
-    
-    uploadArea.addEventListener('drop', function(e) {
-        e.preventDefault();
-        uploadArea.classList.remove('dragover');
-        handleFiles(e.dataTransfer.files);
-    });
-    
-    uploadArea.addEventListener('click', function() {
-        fileInput.click();
-    });
-    
-    fileInput.addEventListener('change', function() {
-        handleFiles(this.files);
-    });
-}
-
-function handleFiles(files) {
-    const validFiles = Array.from(files).filter(file => {
-        const extension = file.name.toLowerCase().split('.').pop();
-        return ['ifc', 'ifcxml', 'ifczip'].includes(extension);
-    });
-    
-    if (validFiles.length === 0) {
-        showAlert('Please select valid IFC files (.ifc, .ifcxml, .ifczip)', 'warning');
-        return;
-    }
-    
-    selectedFiles = [...selectedFiles, ...validFiles];
-    updateSelectedFilesDisplay();
-}
-
-function updateSelectedFilesDisplay() {
-    const filesList = document.getElementById('selectedFilesList');
-    const selectedFilesDiv = document.getElementById('selectedFiles');
-    
-    if (!filesList || !selectedFilesDiv) return;
-    
-    let html = '';
-    selectedFiles.forEach((file, index) => {
-        html += `
-            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
-                <div>
-                    <div class="fw-bold">${file.name}</div>
-                    <small class="text-muted">${formatFileSize(file.size)}</small>
-                </div>
-                <button class="btn btn-sm btn-outline-danger" onclick="removeFile(${index})">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        `;
-    });
-    
-    filesList.innerHTML = html;
-    selectedFilesDiv.style.display = 'block';
-}
-
-function removeFile(index) {
-    selectedFiles.splice(index, 1);
-    if (selectedFiles.length === 0) {
-        document.getElementById('selectedFiles').style.display = 'none';
-    } else {
-        updateSelectedFilesDisplay();
-    }
-}
-
-function clearSelectedFiles() {
-    selectedFiles = [];
-    document.getElementById('selectedFiles').style.display = 'none';
-}
-
-function formatFileSize(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
-async function startUpload() {
-    if (selectedFiles.length === 0) return;
-    
-    const progressBar = document.getElementById('uploadProgress');
-    const progressText = document.getElementById('uploadProgressText');
-    const uploadButton = document.getElementById('uploadButton');
-    
-    uploadButton.disabled = true;
-    uploadButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
-    
-    let totalSize = selectedFiles.reduce((sum, file) => sum + file.size, 0);
-    let uploadedSize = 0;
-    
-    const filesToUpload = [...selectedFiles];
-    
-    for (let i = 0; i < filesToUpload.length; i++) {
-        const file = filesToUpload[i];
-        const formData = new FormData();
-        formData.append('file', file);
-        
-        try {
-            const response = await apiRequest('/files/upload', {
-                method: 'POST',
-                body: formData
-            });
-            
-            if (response && response.ok) {
-                uploadedSize += file.size;
-                const progress = Math.round((uploadedSize / totalSize) * 100);
-                progressBar.style.width = `${progress}%`;
-                progressText.textContent = `Uploading ${file.name}... ${progress}%`;
-            } else {
-                throw new Error(`Failed to upload ${file.name}`);
-            }
-        } catch (error) {
-            console.error(`Error uploading ${file.name}:`, error);
-            showAlert(`Failed to upload ${file.name}: ${error.message}`, 'danger');
-            break;
-        }
-    }
-    
-    progressBar.style.width = '100%';
-    progressText.textContent = 'Upload complete!';
-    
-    setTimeout(() => {
-        progressBar.style.width = '0%';
-        progressText.textContent = '';
-        uploadButton.disabled = false;
-        uploadButton.innerHTML = '<i class="fas fa-upload"></i> Upload Files';
-        selectedFiles = [];
-        document.getElementById('selectedFiles').style.display = 'none';
-        loadUserFiles();
-        loadUserData();
-    }, 2000);
-}
 
 // File management functions
 async function loadUserFiles() {
@@ -405,7 +264,7 @@ function displayUserFiles(files) {
 }
 
 function viewFiles() {
-    const modal = new bootstrap.Modal(document.getElementById('viewFilesModal'));
+    const modal = new bootstrap.Modal(document.getElementById('filesModal'));
     modal.show();
     loadUserFiles();
 }
@@ -414,11 +273,11 @@ function openMyFiles() { viewFiles(); }
 
 function openUploadModal() {
     // Close view files modal if open
-    const viewModal = bootstrap.Modal.getInstance(document.getElementById('viewFilesModal'));
+    const viewModal = bootstrap.Modal.getInstance(document.getElementById('filesModal'));
     if (viewModal) viewModal.hide();
     
     // Open upload modal
-    const uploadModal = new bootstrap.Modal(document.getElementById('uploadFileModal'));
+    const uploadModal = new bootstrap.Modal(document.getElementById('uploadModal'));
     uploadModal.show();
 }
 
@@ -477,6 +336,18 @@ function refreshFiles() {
     loadUserData();
 }
 
+// IFC Viewer function
+function openIFCViewer() {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+        alert('Please login first');
+        return;
+    }
+    
+    const url = `http://localhost:5175?token=${token}`;
+    window.open(url, '_blank');
+}
+
 // Profile management
 async function editProfile() {
     const modal = new bootstrap.Modal(document.getElementById('editProfileModal'));
@@ -515,6 +386,15 @@ async function saveProfile() {
     }
 }
 
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+
 // Utility functions
 function showAlert(message, type = 'info') {
     const alertDiv = document.createElement('div');
@@ -534,22 +414,17 @@ function showAlert(message, type = 'info') {
 document.addEventListener('DOMContentLoaded', function() {
     loadUserData();
     loadUserFiles();
-    loadRecentActivityForCard();
-    setupFileUpload();
 });
 
 // Make functions globally available
 window.viewFiles = viewFiles;
 window.openMyFiles = openMyFiles;
-window.openUploadModal = openUploadModal;
 window.showLoginHistory = showLoginHistory;
 window.showStorageDetails = showStorageDetails;
 window.showRecentActivity = showRecentActivity;
+window.openIFCViewer = openIFCViewer;
 window.editProfile = editProfile;
 window.saveProfile = saveProfile;
-window.startUpload = startUpload;
-window.clearSelectedFiles = clearSelectedFiles;
-window.removeFile = removeFile;
 window.deleteFile = deleteFile;
 window.downloadFile = downloadFile;
 window.viewFile = viewFile;
