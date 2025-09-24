@@ -196,7 +196,7 @@ window.addEventListener('ifc-file-selected', async (event: CustomEvent) => {
   try {
     // Показываем только выбранную модель (файлы уже предзагружены)
     const modelId = filename.replace(".ifc", "");
-    auth.showModel(fragments, modelId);
+    auth.showModel(fragments, modelId, true, world);
     
     console.log(`IFC file ${filename} is now visible`);
 
@@ -278,13 +278,11 @@ if (tokenFromUrl) {
   window.history.replaceState({}, document.title, window.location.pathname);
 }
 
-// If file is specified in URL, load it immediately
+// If file is specified in URL, load it immediately after auth initialization
 if (fileFromUrl) {
   console.log('File specified in URL:', fileFromUrl);
-  // Trigger file loading event
-  window.dispatchEvent(new CustomEvent('ifc-file-selected', {
-    detail: { filename: fileFromUrl }
-  }));
+  // Store the file to load after auth is initialized
+  window.fileToLoad = fileFromUrl;
 }
 
 // Create user panel component
@@ -389,6 +387,15 @@ async function initializeAuth() {
     console.log('Preloading all user IFC files...');
     await auth.preloadAllUserIFCFiles(ifcLoader);
     console.log('All IFC files preloaded successfully');
+    
+    // Если есть файл для загрузки из URL, показываем его
+    if (window.fileToLoad) {
+      console.log('Loading specific file from URL:', window.fileToLoad);
+      const modelId = window.fileToLoad.replace(".ifc", "");
+      auth.showModel(fragments, modelId, true, world);
+      console.log(`File ${window.fileToLoad} is now visible`);
+      window.fileToLoad = null; // Clear the file to load
+    }
     
     // Update user panel with current user data
     const user = auth.getUser();

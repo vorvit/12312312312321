@@ -256,7 +256,7 @@ export class AuthIntegration {
   /**
    * Показать/скрыть конкретную модель в сцене
    */
-  showModel(fragments: any, modelId: string, visible: boolean = true): void {
+  showModel(fragments: any, modelId: string, visible: boolean = true, world?: any): void {
     try {
       // Находим модель по ID в fragments.list
       for (const [id, model] of fragments.list) {
@@ -265,14 +265,14 @@ export class AuthIntegration {
             // Показываем модель
             model.visible = true;
             // Добавляем в сцену если нужно
-            if (!world.scene.three.children.includes(model.object)) {
+            if (world && !world.scene.three.children.includes(model.object)) {
               world.scene.three.add(model.object);
             }
           } else {
             // Скрываем модель
             model.visible = false;
             // Убираем из сцены
-            if (world.scene.three.children.includes(model.object)) {
+            if (world && world.scene.three.children.includes(model.object)) {
               world.scene.three.remove(model.object);
             }
           }
@@ -287,20 +287,20 @@ export class AuthIntegration {
   /**
    * Скрыть все модели кроме указанной
    */
-  showOnlyModel(fragments: any, modelId: string): void {
+  showOnlyModel(fragments: any, modelId: string, world?: any): void {
     try {
       // Сначала скрываем все модели
       for (const [id, model] of fragments.list) {
         if (id !== modelId) {
           model.visible = false;
-          if (world.scene.three.children.includes(model.object)) {
+          if (world && world.scene.three.children.includes(model.object)) {
             world.scene.three.remove(model.object);
           }
         }
       }
       
       // Показываем только нужную модель
-      this.showModel(fragments, modelId, true);
+      this.showModel(fragments, modelId, true, world);
     } catch (error) {
       console.error(`Error showing only model ${modelId}:`, error);
     }
