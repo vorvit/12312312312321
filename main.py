@@ -38,6 +38,10 @@ import httpx
 from app.security.rate_limit import LoginRateLimiter
 from app.security.csrf import ensure_csrf_cookie, verify_csrf, CSRF_COOKIE_NAME
 from app.api.responses import api_ok, api_error
+from app.api.mock_files import router as mock_files_router
+import subprocess
+import tempfile
+import os
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -63,6 +67,17 @@ app.add_middleware(
 # Static files and templates
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
+
+# Добавляем обслуживание WASM файлов для IFC загрузчика
+app.mount("/web-ifc", StaticFiles(directory="TSP/public/web-ifc"), name="web-ifc")
+
+# Middleware для правильных MIME-типов WASM файлов
+@app.middleware("http")
+async def add_mime_types(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path.endswith(".wasm"):
+        response.headers["Content-Type"] = "application/wasm"
+    return response
 
 # Global API error handlers (JSON envelope)
 @app.exception_handler(HTTPException)
@@ -553,14 +568,19 @@ async def ifc_viewer_page(request: Request):
             token = auth_header[7:]
     
     # Build TSP viewer URL with token and file
-    if token and filename:
-        tsp_url = f"http://localhost:5175?token={token}&file={filename}"
-    elif token:
-        tsp_url = f"http://localhost:5175?token={token}"
-    elif filename:
-        tsp_url = f"http://localhost:5175?file={filename}"
+    from urllib.parse import quote
+    safe_token = quote(token, safe="") if token else None
+    safe_file = quote(filename, safe="") if filename else None
+
+    if safe_token and safe_file:
+        tsp_url = f"http://localhost:5174?token={safe_token}&file={safe_file}"
+    elif safe_file:
+        # If token not found in cookie/header, still forward only file; viewer will request auth if needed
+        tsp_url = f"http://localhost:5174?file={safe_file}"
+    elif safe_token:
+        tsp_url = f"http://localhost:5174?token={safe_token}"
     else:
-        tsp_url = "http://localhost:5175"
+        tsp_url = "http://localhost:5174"
     
     return RedirectResponse(url=tsp_url, status_code=302)
 
@@ -968,13 +988,14 @@ async def upload_file(
     request: Request,
     file: UploadFile = File(...),
     current_user: User = Depends(require_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    background_tasks: BackgroundTasks = None,
 ):
     """Upload a file to user's storage"""
     try:
         # Read file content (for validation and upload)
         raw_bytes = await file.read()
-
+        
         # Validate filename
         import os, re
         original_name = file.filename or ""
@@ -983,32 +1004,32 @@ async def upload_file(
         safe_name = re.sub(r"[^A-Za-z0-9._-]", "_", safe_name)
         if not safe_name:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid filename")
-
+        
         # Validate extension and size
         allowed_ext = {"ifc", "ifcxml", "ifczip"}
         ext = safe_name.lower().split(".")[-1] if "." in safe_name else ""
         if ext not in allowed_ext:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported file type")
-
+        
         size_bytes = len(raw_bytes)
         max_bytes = settings.MAX_UPLOAD_MB * 1024 * 1024
         if size_bytes > max_bytes:
             raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail=f"File exceeds {settings.MAX_UPLOAD_MB}MB limit")
-
+        
         # Optionally validate MIME (best-effort)
         allowed_mime = {"application/ifc", "application/xml", "application/zip", "application/octet-stream"}
         content_type = file.content_type or "application/octet-stream"
         if content_type not in allowed_mime:
             # allow xml for ifcxml, zip for ifczip, octet-stream fallback
             pass
-
+        
         # Check storage quota
         storage = StorageService()
         current_usage = storage.get_user_usage(current_user.id)
         
         # Ensure storage_quota is not None, use default if it is
         storage_quota = current_user.storage_quota or 1073741824  # 1GB default
-
+        
         if current_usage + size_bytes > storage_quota:
             raise HTTPException(
                 status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
@@ -1048,6 +1069,14 @@ async def upload_file(
             except Exception:
                 pass
             logger.log_file_operation(f"Файл успешно загружен", current_user.id, safe_name, "UPLOAD")
+
+            # Schedule background FRAG conversion
+            try:
+                if background_tasks is not None:
+                    background_tasks.add_task(convert_ifc_to_frag_task, current_user.id, safe_name)
+            except Exception as conv_err:
+                logger.log_error(f"Не удалось поставить задачу конвертации FRAG: {conv_err}")
+
             return api_ok({"filename": safe_name, "size": size_bytes}, message="File uploaded successfully")
         else:
             raise HTTPException(
@@ -1060,6 +1089,67 @@ async def upload_file(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
         )
+
+# --- IFC -> FRAG conversion utilities ---
+
+def convert_ifc_to_frag_task(user_id: int, ifc_filename: str) -> None:
+    """Background task: download IFC, convert to FRAG using Node script, upload FRAG back."""
+    try:
+        storage = StorageService()
+        # Download IFC to temp
+        with tempfile.TemporaryDirectory() as tmpdir:
+            in_path = os.path.join(tmpdir, ifc_filename)
+            out_path = os.path.join(tmpdir, os.path.splitext(ifc_filename)[0] + ".frag")
+            
+            # Read bytes from storage
+            ifc_bytes = storage.download_user_file(user_id, ifc_filename)
+            with open(in_path, "wb") as f:
+                f.write(ifc_bytes)
+            
+            # Run Node converter script
+            node_cmd = os.environ.get("NODE_BIN", "node")
+            script_path = os.path.abspath(os.path.join("TSP", "scripts", "ifc2frag.cjs"))
+            try:
+                result = subprocess.run([node_cmd, script_path, in_path, out_path], capture_output=True, text=True, cwd=os.path.abspath("TSP"), timeout=600)
+                if result.returncode != 0:
+                    logger.log_error(f"FRAG conversion failed: {result.stderr}")
+                    return
+            except Exception as run_err:
+                logger.log_error(f"FRAG conversion exception: {run_err}")
+                return
+            
+            # Upload FRAG back to storage
+            if os.path.exists(out_path):
+                with open(out_path, "rb") as f:
+                    frag_bytes = f.read()
+                storage.upload_user_file(user_id, os.path.splitext(ifc_filename)[0] + ".frag", io.BytesIO(frag_bytes), "application/octet-stream")
+                # Optionally store DB record
+                db = next(get_db())
+                try:
+                    frag_record = FileModel(
+                        user_id=user_id,
+                        filename=os.path.splitext(ifc_filename)[0] + ".frag",
+                        original_filename=os.path.splitext(ifc_filename)[0] + ".frag",
+                        file_size=len(frag_bytes),
+                        content_type="application/octet-stream",
+                        storage_path=f"user_{user_id}/{os.path.splitext(ifc_filename)[0] + '.frag'}",
+                        is_public=False
+                    )
+                    db.add(frag_record)
+                    db.commit()
+                    CacheService().delete(f"files:list:{user_id}")
+                    logger.log_file_operation("FRAG создан и загружен", user_id, frag_record.filename, "CONVERT")
+                except Exception as db_err:
+                    logger.log_error(f"DB error while adding FRAG record: {db_err}")
+    except Exception as e:
+        logger.log_error(f"convert_ifc_to_frag_task error: {e}")
+
+@app.post("/api/files/convert/{filename}")
+async def convert_ifc_to_frag(filename: str, current_user: User = Depends(require_current_user)):
+    """Manually trigger IFC->FRAG conversion for a user's file."""
+    background_tasks = BackgroundTasks()
+    background_tasks.add_task(convert_ifc_to_frag_task, current_user.id, filename)
+    return api_ok({"scheduled": True, "filename": filename}, message="Conversion scheduled")
 
 @app.get("/api/files")
 async def list_files(current_user: User = Depends(require_current_user)):
@@ -1124,6 +1214,29 @@ async def download_file(
             detail=str(e)
         )
 
+@app.head("/files/download/{filename}")
+async def head_download_file(
+    filename: str,
+    request: Request,
+    current_user: User = Depends(require_current_user)
+):
+    try:
+        storage = StorageService()
+        file_data = storage.download_user_file(current_user.id, filename)
+        if file_data is None:
+            return Response(status_code=404)
+        return Response(
+            status_code=200,
+            headers={
+                "Content-Type": "application/octet-stream",
+                "Content-Disposition": f"attachment; filename={filename}",
+                "Accept-Ranges": "bytes",
+                "Content-Length": str(len(file_data))
+            }
+        )
+    except Exception:
+        return Response(status_code=500)
+
 @app.get("/api/files/download/{filename}")
 async def download_file_with_token(
     filename: str,
@@ -1141,7 +1254,7 @@ async def download_file_with_token(
     
     # Verify token and get user
     try:
-        from jose import jwt, JWTError
+        from jose import jwt
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         user_id: int = payload.get("sub")
         if user_id is None:
@@ -1207,6 +1320,36 @@ async def download_file_with_token(
         # Clean up temp directory on error
         shutil.rmtree(temp_dir, ignore_errors=True)
         raise e
+
+@app.head("/api/files/download/{filename}")
+async def head_download_file_with_token(
+    filename: str,
+    request: Request
+):
+    token = request.query_params.get("token")
+    if not token:
+        return Response(status_code=401)
+    try:
+        from jose import jwt
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id: int = payload.get("sub")
+        if not user_id:
+            return Response(status_code=401)
+    except Exception:
+        return Response(status_code=401)
+    storage = StorageService()
+    file_data = storage.download_user_file(user_id, filename)
+    if file_data is None:
+        return Response(status_code=404)
+    return Response(
+        status_code=200,
+        headers={
+            "Content-Type": "application/octet-stream",
+            "Content-Disposition": f"attachment; filename={filename}",
+            "Accept-Ranges": "bytes",
+            "Content-Length": str(len(file_data))
+        }
+    )
 
 @app.get("/files/view/{filename}")
 async def view_file(
@@ -1450,6 +1593,37 @@ async def health_postgres():
     """Check PostgreSQL health"""
     return await HealthCheckService.check_postgres()
 
+@app.get("/api/frag-converter/health")
+async def frag_converter_health():
+    try:
+        node_cmd = os.environ.get("NODE_BIN", "node")
+        script_path = os.path.abspath(os.path.join("TSP", "scripts", "ifc2frag.cjs"))
+        # Check node availability
+        try:
+            ver = subprocess.run([node_cmd, "-v"], capture_output=True, text=True, timeout=10)
+            node_ok = ver.returncode == 0
+            node_version = ver.stdout.strip() or ver.stderr.strip()
+        except Exception as e:
+            node_ok = False
+            node_version = str(e)
+        # Check script exists and self-test
+        script_exists = os.path.exists(script_path)
+        selftest_ok = False
+        selftest_out = None
+        if script_exists and node_ok:
+            st = subprocess.run([node_cmd, script_path, "--self-test"], capture_output=True, text=True, timeout=20)
+            selftest_ok = st.returncode == 0
+            selftest_out = st.stdout.strip() or st.stderr.strip()
+        return api_ok({
+            "node_ok": node_ok,
+            "node_version": node_version,
+            "script_exists": script_exists,
+            "selftest_ok": selftest_ok,
+            "selftest_out": selftest_out,
+        })
+    except Exception as e:
+        return api_error(str(e), status=500)
+
 # New page routes
 @app.get("/files", response_class=HTMLResponse)
 async def files_page(request: Request):
@@ -1490,6 +1664,9 @@ async def admin_system_page(request: Request):
     if not current_user or not getattr(current_user, "is_admin", False):
         return RedirectResponse(url="/login", status_code=302)
     return templates.TemplateResponse("admin-system.html", {"request": request, "user": current_user})
+
+# Include mock files router
+app.include_router(mock_files_router)
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

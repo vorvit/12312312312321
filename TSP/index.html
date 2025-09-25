@@ -5,15 +5,16 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/vite.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="IFC 3D Viewer - Professional Building Information Modeling" />
-  <meta name="robots" content="noindex, nofollow" />
-  <meta name="referrer" content="no-referrer" />
-  <title>IFC 3D Viewer</title>
+  <title>BIM App</title>
   <link rel="stylesheet" href="./src/style.css">
 </head>
 
 <body>
   <bim-grid id="app"></bim-grid>
+  
+  <!-- Dashboard button removed -->
+  
+  <!-- IoT Sensors panel -->
   <div id="sensor-panel" style="
     position: absolute;
     bottom: 50px;
@@ -30,6 +31,7 @@
     <h3 style="margin-top:0;">IoT Sensors</h3>
     <ul id="sensor-list" style="list-style:none; padding:0; margin:0;"></ul>
   </div>
+  
   <script type="module" src="/src/main.ts"></script>
 </body>
 

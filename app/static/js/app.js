@@ -12,6 +12,10 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
 });
 
+function dispatchTokenUpdated() {
+    try { window.dispatchEvent(new CustomEvent('token-updated')); } catch {}
+}
+
 function initializeApp() {
     // Check for OAuth token in URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -21,6 +25,7 @@ function initializeApp() {
         localStorage.setItem('access_token', oauthToken);
         AppState.token = oauthToken;
         AppState.isAuthenticated = true;
+        dispatchTokenUpdated();
         
         // Clean URL
         window.history.replaceState({}, document.title, window.location.pathname);
@@ -111,6 +116,18 @@ function login(token, user) {
     AppState.user = user;
     AppState.isAuthenticated = true;
     updateAuthUI();
+    dispatchTokenUpdated();
+}
+
+function broadcastLogoutToViewer() {
+    try {
+        const iframe = document.getElementById('viewerPreloadIframe');
+        if (iframe && iframe.contentWindow) {
+            iframe.contentWindow.postMessage({ type: 'logout' }, 'http://localhost:5174');
+        }
+    } catch (e) {
+        console.warn('Failed to broadcast logout to viewer:', e);
+    }
 }
 
 function logout() {
@@ -119,6 +136,8 @@ function logout() {
     AppState.user = null;
     AppState.isAuthenticated = false;
     updateAuthUI();
+    // Tell viewer (in preload iframe) to clear its session too
+    broadcastLogoutToViewer();
     window.location.href = '/login';
 }
 

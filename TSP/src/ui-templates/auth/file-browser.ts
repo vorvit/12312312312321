@@ -6,13 +6,14 @@ export interface FileBrowserState {
   selectedFile: string | null;
   searchTerm: string;
   isLoading: boolean;
+  visibleFiles: string[]; // Track which files are visible
 }
 
 export const fileBrowserTemplate: BUI.StatefullComponent<FileBrowserState> = (
   state,
   update,
 ) => {
-  const { files, selectedFile, searchTerm, isLoading } = state;
+  const { files, selectedFile, searchTerm, isLoading, visibleFiles } = state;
   const auth = AuthIntegration.getInstance();
 
   const onFileSelect = (filename: string) => {
@@ -41,6 +42,42 @@ export const fileBrowserTemplate: BUI.StatefullComponent<FileBrowserState> = (
 
   const onUploadRedirect = () => {
     auth.redirectToFileUpload();
+  };
+
+  const onToggleVisibility = (filename: string) => {
+    const newVisibleFiles = [...visibleFiles];
+    const index = newVisibleFiles.indexOf(filename);
+    if (index > -1) {
+      newVisibleFiles.splice(index, 1);
+      // Hide file
+      window.dispatchEvent(new CustomEvent('ifc-file-hide', { 
+        detail: { filename } 
+      }));
+    } else {
+      newVisibleFiles.push(filename);
+      // Show file
+      window.dispatchEvent(new CustomEvent('ifc-file-show', { 
+        detail: { filename } 
+      }));
+    }
+    update({ visibleFiles: newVisibleFiles });
+  };
+
+  const onRemoveFromCard = (filename: string) => {
+    // Remove from card only, not from database
+    const newFiles = files.filter(f => f.name !== filename);
+    const newVisibleFiles = visibleFiles.filter(f => f !== filename);
+    
+    // Hide file if it was visible
+    window.dispatchEvent(new CustomEvent('ifc-file-hide', { 
+      detail: { filename } 
+    }));
+    
+    update({ 
+      files: newFiles, 
+      visibleFiles: newVisibleFiles,
+      selectedFile: selectedFile === filename ? null : selectedFile
+    });
   };
 
   // Filter files based on search term
@@ -162,9 +199,37 @@ export const fileBrowserTemplate: BUI.StatefullComponent<FileBrowserState> = (
                   ${formatFileSize(file.size)}
                 </div>
               </div>
-              ${selectedFile === file.name ? BUI.html`
-                <bim-icon icon="mdi:check" style="color: #007bff;"></bim-icon>
-              ` : ''}
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <bim-button 
+                  icon=${visibleFiles.includes(file.name) ? "mdi:eye-off" : "mdi:eye"}
+                  @click=${() => onToggleVisibility(file.name)}
+                  style="
+                    background: ${visibleFiles.includes(file.name) ? '#dc3545' : '#28a745'}; 
+                    color: white; 
+                    border: none; 
+                    padding: 0.25rem;
+                    min-width: 32px;
+                    height: 32px;
+                  "
+                  title=${visibleFiles.includes(file.name) ? 'Hide file' : 'Show file'}
+                ></bim-button>
+                <bim-button 
+                  icon="mdi:delete"
+                  @click=${() => onRemoveFromCard(file.name)}
+                  style="
+                    background: #dc3545; 
+                    color: white; 
+                    border: none; 
+                    padding: 0.25rem;
+                    min-width: 32px;
+                    height: 32px;
+                  "
+                  title="Remove from card"
+                ></bim-button>
+                ${selectedFile === file.name ? BUI.html`
+                  <bim-icon icon="mdi:check" style="color: #007bff;"></bim-icon>
+                ` : ''}
+              </div>
             </div>
           </div>
         `)}

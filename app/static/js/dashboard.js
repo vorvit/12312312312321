@@ -20,6 +20,21 @@ async function loadUserData() {
         if (response && response.ok) {
             const user = await response.json();
             updateDashboard(user);
+            ensurePreloadIframe();
+            setPreloadBadge('preloading');
+            // Load files manifest from API once and store
+            try {
+                const filesResp = await apiRequest('/api/files');
+                if (filesResp && filesResp.ok) {
+                    const body = await filesResp.json();
+                    const files = body.data || body || [];
+                    const manifest = files.map(f => ({ name: f.name || f.filename, size: f.size || f.file_size, etag: f.etag || null, updatedAt: f.last_modified || null }));
+                    localStorage.setItem('files_manifest', JSON.stringify(manifest));
+                }
+            } catch {}
+            // Send token and manifest to viewer and trigger explicit preload
+            sendHandshakeToViewer();
+            sendPreloadAllToViewer();
         } else {
             localStorage.removeItem('access_token');
             window.location.href = '/login';
@@ -321,14 +336,12 @@ async function downloadFile(filename) {
 }
 
 function viewFile(filename) {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-        alert('Please login first');
-        return;
-    }
-    
-    const url = `http://localhost:5174?token=${token}&file=${encodeURIComponent(filename)}`;
-    window.open(url, '_blank');
+    // Open server viewer route with file param; it will forward to TSP with token & file
+    try {
+        const filesModal = bootstrap.Modal.getInstance(document.getElementById('filesModal'));
+        if (filesModal) filesModal.hide();
+    } catch {}
+    window.location.href = `/ifc-viewer?file=${encodeURIComponent(filename)}`;
 }
 
 function refreshFiles() {
@@ -343,9 +356,9 @@ function openIFCViewer() {
         alert('Please login first');
         return;
     }
-    
-    const url = `http://localhost:5174?token=${token}`;
-    window.open(url, '_blank');
+    // Same-window navigation to viewer (reuse caches from hidden iframe preload)
+    const url = `${VIEWER_ORIGIN}?token=${encodeURIComponent(token)}`;
+    window.location.href = url;
 }
 
 // Profile management
@@ -578,12 +591,149 @@ function removeFile(index) {
     }
 }
 
+// Reusable IFC Viewer window management
+let viewerWindow = null;
+const VIEWER_ORIGIN = 'http://localhost:5174';
+const VIEWER_NAME = 'ifc-viewer';
+
+// Hidden iframe for background preload (same-window navigation model)
+function ensurePreloadIframe() {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+    let iframe = document.getElementById('viewerPreloadIframe');
+    if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.id = 'viewerPreloadIframe';
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+    }
+    const preloadUrl = `${VIEWER_ORIGIN}`; // no token, no query
+    if (iframe.src !== preloadUrl) {
+        iframe.src = preloadUrl;
+        iframe.onload = () => {
+            // After viewer ready, send handshake and explicit preload
+            setTimeout(() => {
+                sendHandshakeToViewer();
+                sendPreloadAllToViewer();
+            }, 200);
+        };
+    } else {
+        // If already loaded, just handshake and preload
+        sendHandshakeToViewer();
+        sendPreloadAllToViewer();
+    }
+}
+
+function sendPreloadAllToViewer() {
+    // Avoid sending before iframe is ready; rely on onload hook
+    const iframe = document.getElementById('viewerPreloadIframe');
+    if (!viewerWindow && !(iframe && iframe.contentWindow)) return;
+    sendToViewer({ type: 'preloadAll' });
+}
+
+function setPreloadBadge(state) {
+    const badge = document.getElementById('viewerPreloadStatusBadge');
+    if (!badge) return;
+    if (state === 'preloading') {
+        badge.textContent = 'Preloading';
+        badge.className = 'badge rounded-pill bg-warning ms-2';
+    } else if (state === 'ready') {
+        badge.textContent = 'Ready';
+        badge.className = 'badge rounded-pill bg-success ms-2';
+    } else {
+        badge.textContent = 'Idle';
+        badge.className = 'badge rounded-pill bg-secondary ms-2';
+    }
+}
+
+window.addEventListener('message', (event) => {
+    if (event.origin !== VIEWER_ORIGIN) return;
+    const msg = event.data || {};
+    if (msg.type === 'preload-status') {
+        setPreloadBadge(msg.state);
+        if (typeof msg.progress === 'number') {
+            // Optionally, later show a progress bar; for now, update title
+            const badge = document.getElementById('viewerPreloadStatusBadge');
+            if (badge) badge.title = `Preload: ${msg.progress}%`;
+        }
+    }
+});
+
+// When ensuring viewer, ping for current status
+function ensureViewerWindow({ focus = false } = {}) {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+        console.warn('No token available to open viewer');
+        return null;
+    }
+    const url = `${VIEWER_ORIGIN}?token=${encodeURIComponent(token)}&preload=1`;
+
+    if (viewerWindow && !viewerWindow.closed) {
+        if (focus) {
+            try { viewerWindow.focus(); } catch (e) { /* ignore */ }
+        } else {
+            try { viewerWindow.blur(); window.focus(); } catch (e) { /* ignore */ }
+        }
+        // ask for status
+        try { viewerWindow.postMessage({ type: 'preload-status-request' }, VIEWER_ORIGIN); } catch (e) {}
+        return viewerWindow;
+    }
+
+    viewerWindow = window.open(url, VIEWER_NAME);
+    if (!viewerWindow) {
+        console.warn('Viewer window blocked by popup blocker');
+        return null;
+    }
+    if (!focus) {
+        try { viewerWindow.blur(); window.focus(); } catch (e) { /* ignore */ }
+    }
+    // ask for status
+    try { viewerWindow.postMessage({ type: 'preload-status-request' }, VIEWER_ORIGIN); } catch (e) {}
+    return viewerWindow;
+}
+
+function sendToViewer(message) {
+    const origin = '*';
+    if (viewerWindow && !viewerWindow.closed) {
+        try { viewerWindow.postMessage(message, origin); } catch (e) { console.error('postMessage to viewerWindow failed', e); }
+    }
+    const iframe = document.getElementById('viewerPreloadIframe');
+    if (iframe && iframe.contentWindow) {
+        try { iframe.contentWindow.postMessage(message, origin); } catch (e) { console.error('postMessage to iframe failed', e); }
+    }
+}
+
+function sendHandshakeToViewer() {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+    const iframe = document.getElementById('viewerPreloadIframe');
+    // Avoid sending before iframe is ready; rely on onload hook
+    if (!viewerWindow && !(iframe && iframe.contentWindow)) return;
+
+    const msgToken = { type: 'token', value: token };
+    const manifest = JSON.parse(localStorage.getItem('files_manifest') || '[]');
+    const msgManifest = { type: 'manifest', value: manifest };
+
+    sendToViewer(msgToken);
+    sendToViewer(msgManifest);
+}
+
+// React on token refresh notifications from app.js
+window.addEventListener('token-updated', (e) => {
+    try {
+        sendHandshakeToViewer();
+    } catch {}
+});
+
 // Load data on page load
 document.addEventListener('DOMContentLoaded', function() {
     loadUserData();
     loadUserFiles();
     setupFileUpload();
 });
+
+// Set initial badge state on load
+setPreloadBadge('Idle');
 
 // Make functions globally available
 window.viewFiles = viewFiles;
