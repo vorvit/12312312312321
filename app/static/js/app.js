@@ -4,7 +4,8 @@
 const AppState = {
     user: null,
     token: null,
-    isAuthenticated: false
+    isAuthenticated: false,
+    theme: (localStorage.getItem('theme') || 'light')
 };
 
 // Initialize app
@@ -17,6 +18,7 @@ function dispatchTokenUpdated() {
 }
 
 function initializeApp() {
+    applyTheme(AppState.theme);
     // Check for OAuth token in URL
     const urlParams = new URLSearchParams(window.location.search);
     const oauthToken = urlParams.get('token');
@@ -107,6 +109,25 @@ function updateAuthUI() {
         if (logoutButton) logoutButton.style.display = 'none';
         if (adminSection) adminSection.style.display = 'none';
     }
+}
+
+// Theme handling (applies to all pages except embedded TSP viewer)
+function applyTheme(theme) {
+    const b = document.body;
+    if (!b) return;
+    if (theme === 'dark') {
+        b.classList.add('theme-dark');
+        b.classList.remove('theme-light');
+    } else {
+        b.classList.add('theme-light');
+        b.classList.remove('theme-dark');
+    }
+}
+
+function setTheme(theme) {
+    AppState.theme = theme === 'dark' ? 'dark' : 'light';
+    try { localStorage.setItem('theme', AppState.theme); } catch {}
+    applyTheme(AppState.theme);
 }
 
 // Authentication helpers
@@ -392,6 +413,7 @@ window.formatBytes = formatBytes;
 window.formatDate = formatDate;
 window.setupFileUpload = setupFileUpload;
 window.setupPasswordToggle = setupPasswordToggle;
+window.setTheme = setTheme;
 // Theme management removed - using light theme only
 
 window.login = login;

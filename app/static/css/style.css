@@ -7,6 +7,122 @@ body {
     background-color: #e9ecef;
 }
 
+/* Light/Dark themes (viewer keeps its own theme via TSP) */
+body.theme-light {
+    --bg-color: #e9ecef;
+    --card-bg: #ffffff;
+    --text-color: #212529;
+    --muted-color: #6c757d;
+    --border-color: #e9ecef;
+    --primary: #0d6efd;
+}
+
+body.theme-dark {
+    --bg-color: #1a1d23;
+    --card-bg: #23262b;
+    --text-color: #f5f7fb;
+    --muted-color: #9aa0a6;
+    --border-color: #2f333a;
+    --primary: #4da3ff;
+}
+
+body.theme-light { background-color: var(--bg-color); }
+body.theme-dark { background-color: var(--bg-color); color: var(--text-color); }
+
+.card { background-color: var(--card-bg); }
+.card-header { background-color: var(--card-bg); border-bottom: 1px solid var(--border-color); }
+.navbar { background-color: #00457E !important; }
+.dropdown-item:hover { background-color: rgba(13, 110, 253, 0.08); color: var(--primary); }
+.form-control { border-color: var(--border-color); }
+.form-control:focus { box-shadow: 0 0 0 0.2rem rgba(13,110,253,0.25); }
+.input-group-text { background-color: var(--card-bg); border-color: var(--border-color); }
+.alert { color: var(--text-color); }
+
+/* Dark theme comprehensive overrides (bootstrap-like) */
+body.theme-dark a { color: var(--primary); }
+body.theme-dark .text-muted { color: var(--muted-color) !important; }
+
+/* Navbar */
+body.theme-dark .navbar { background-color: #1f2430 !important; }
+body.theme-dark .navbar-brand, 
+body.theme-dark .navbar-nav .nav-link { color: #f5f7fb !important; }
+body.theme-dark .navbar-nav .nav-link:hover { color: rgba(245,247,251,0.85) !important; }
+
+/* Dropdowns */
+body.theme-dark .dropdown-menu { background-color: #23262b; color: var(--text-color); border: 1px solid var(--border-color); }
+body.theme-dark .dropdown-item { color: var(--text-color); }
+body.theme-dark .dropdown-item:hover { background-color: #2a2d32; color: var(--primary); }
+body.theme-dark .dropdown-divider { border-top-color: var(--border-color); }
+body.theme-dark .dropdown-header { color: var(--muted-color); }
+
+/* Cards */
+body.theme-dark .card { background-color: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color); }
+body.theme-dark .card-header { background-color: #20232a; color: var(--text-color); border-bottom: 1px solid var(--border-color); }
+body.theme-dark .card-title { color: var(--text-color); }
+
+/* Buttons */
+body.theme-dark .btn { color: var(--text-color); border-color: var(--border-color); }
+body.theme-dark .btn-primary { background-color: var(--primary); border-color: var(--primary); color: #0b1220; }
+body.theme-dark .btn-outline-primary { color: var(--primary); border-color: var(--primary); }
+body.theme-dark .btn-outline-primary:hover { background-color: var(--primary); color: #0b1220; }
+body.theme-dark .btn-outline-secondary { color: var(--text-color); border-color: var(--border-color); }
+body.theme-dark .btn-outline-secondary:hover { background-color: #2a2d32; }
+
+/* Forms */
+body.theme-dark .form-control { 
+  background-color: #1f2227; 
+  color: var(--text-color); 
+  border-color: var(--border-color);
+}
+body.theme-dark .form-control::placeholder { color: var(--muted-color); }
+body.theme-dark .form-select { background-color: #1f2227; color: var(--text-color); border-color: var(--border-color); }
+body.theme-dark .input-group-text { background-color: #20232a; color: var(--text-color); border-color: var(--border-color); }
+body.theme-dark .form-control:focus, 
+body.theme-dark .form-select:focus { border-color: var(--primary); box-shadow: 0 0 0 0.2rem rgba(77,163,255,0.25); }
+
+/* Tables */
+body.theme-dark .table { color: var(--text-color); }
+body.theme-dark .table thead th { color: var(--muted-color); border-bottom-color: var(--border-color); }
+body.theme-dark .table td, 
+body.theme-dark .table th { border-color: var(--border-color); }
+body.theme-dark .table-striped tbody tr:nth-of-type(odd) { background-color: #20232a; }
+
+/* Modals */
+body.theme-dark .modal-content { background-color: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color); }
+body.theme-dark .modal-header, 
+body.theme-dark .modal-footer { border-color: var(--border-color); }
+
+/* Progress */
+body.theme-dark .progress { background-color: #2a2d32; }
+body.theme-dark .progress-bar { background-color: var(--primary); }
+
+/* Alerts */
+body.theme-dark .alert { background-color: #20252b; color: var(--text-color); }
+body.theme-dark .alert-danger { background-color: #2a1f22; color: #ffb3b8; }
+body.theme-dark .alert-success { background-color: #1f2a22; color: #b7f0c9; }
+body.theme-dark .alert-info { background-color: #1f2630; color: #b7d9ff; }
+body.theme-dark .alert-warning { background-color: #2a261f; color: #ffdca8; }
+
+/* Badges */
+body.theme-dark .badge { background-color: #2a2d32; color: var(--text-color); }
+body.theme-dark .badge.bg-success { background-color: #1f3a2a !important; }
+body.theme-dark .badge.bg-warning { background-color: #3a2f1f !important; }
+body.theme-dark .badge.bg-secondary { background-color: #2a2d32 !important; }
+
+/* List groups */
+body.theme-dark .list-group-item { background-color: var(--card-bg); color: var(--text-color); border-color: var(--border-color); }
+body.theme-dark .list-group-item.active { background-color: var(--primary); border-color: var(--primary); color: #0b1220; }
+
+/* Borders and hr */
+body.theme-dark hr, 
+body.theme-dark .border, 
+body.theme-dark .border-top, 
+body.theme-dark .border-bottom, 
+body.theme-dark .border-start, 
+body.theme-dark .border-end { border-color: var(--border-color) !important; }
+
+/* Tooltips/Popovers could be added similarly if used */
+
 /* Navigation */
 .navbar {
     background-color: #00457E !important;
@@ -125,6 +241,7 @@ body {
 /* Admin section styling */
 #adminSection .dropdown-item {
     color: #212529;
+    font-weight: 600;
 }
 
 #adminSection .dropdown-item:hover {
@@ -135,6 +252,13 @@ body {
 #adminSection .dropdown-header {
     color: #6c757d;
 }
+
+/* Admin dropdown contrast per theme */
+body.theme-light #adminSection .dropdown-item { color: #212529 !important; font-weight: 600; }
+body.theme-light #adminSection .dropdown-item:hover { background-color: #f1f3f5; color: #0d6efd !important; }
+body.theme-dark #adminSection .dropdown-item { color: var(--text-color) !important; font-weight: 600; }
+body.theme-dark #adminSection .dropdown-item:hover { background-color: #2a2d32; color: var(--primary) !important; }
+body.theme-dark #adminSection .dropdown-header { color: var(--muted-color) !important; }
 
 
 /* Mobile responsiveness */
@@ -269,6 +393,35 @@ body {
     font-size: 1.1rem;
 }
 
+/* Google Sign-In button style (brand-compliant look) */
+.btn-google {
+    background-color: #ffffff;
+    color: #3c4043;
+    border: 1px solid #dadce0;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 10px 16px;
+    font-weight: 600;
+}
+.btn-google:hover { background-color: #f7f8f8; border-color: #dadce0; color: #1a73e8; }
+.btn-google .g-icon { display: inline-flex; width: 18px; height: 18px; }
+.btn-google .g-text { line-height: 1; }
+
+/* Dark theme variant */
+body.theme-dark .btn-google {
+    background-color: #2a2d32;
+    color: #f5f7fb;
+    border-color: #3a3f45;
+}
+body.theme-dark .btn-google:hover {
+    background-color: #343a40;
+    color: #4da3ff;
+    border-color: #4a4f56;
+}
+
 /* Form controls */
 .form-control {
     border-radius: 8px;
@@ -309,6 +462,17 @@ body {
     padding: 1.5rem;
     margin-bottom: 1rem;
 }
+
+/* Dark theme dashboard/admin metric cards in That Open style */
+body.theme-dark .dashboard-card {
+    background: linear-gradient(135deg, #2a2d32, #20232a);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+body.theme-dark .metric-card .align-self-center i { color: #4da3ff; }
+body.theme-dark .metric-card .card-title { color: var(--muted-color); }
+body.theme-dark .metric-card h2, 
+body.theme-dark .metric-card h6 { color: var(--text-color); }
 
 .dashboard-card h4 {
     font-size: 0.9rem;
@@ -374,6 +538,12 @@ body {
 footer {
     margin-top: auto;
 }
+
+/* Dark theme footer */
+body.theme-dark footer {
+    background-color: #1f2430 !important;
+}
+body.theme-dark footer p { color: #9aa0a6 !important; }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
