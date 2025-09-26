@@ -103,10 +103,26 @@ class ServiceManager:
         print("🔐 Запуск Auth Service...")
         
         try:
-            # Запускаем FastAPI сервер
-            process = subprocess.Popen([
-                sys.executable, 'start.py'
-            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            # Абсолютный путь к start.py
+            proj_root = Path(__file__).resolve().parent
+            start_script = proj_root / 'start.py'
+
+            if start_script.exists():
+                # Наследуем stdout/stderr, чтобы видеть ошибки
+                process = subprocess.Popen(
+                    [sys.executable, str(start_script)],
+                    cwd=str(proj_root)
+                )
+            else:
+                # Фолбэк: запускаем uvicorn напрямую
+                print("⚠️ start.py не найден, запускаю uvicorn напрямую")
+                process = subprocess.Popen(
+                    [
+                        sys.executable, '-m', 'uvicorn', 'main:app',
+                        '--host', '0.0.0.0', '--port', '8000', '--reload'
+                    ],
+                    cwd=str(proj_root)
+                )
             
             self.processes.append(('Auth Service', process))
             

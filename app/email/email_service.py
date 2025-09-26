@@ -86,5 +86,19 @@ class EmailService:
         
         return await self.send_email(to_email, subject, body)
 
+    # --- Compatibility wrappers used by main.py ---
+    async def send_welcome_email(self, email: str, username: str, password: str, background_tasks):
+        subject = "Welcome to IFC Auth Service!"
+        body = f"""
+        Hello {username},\n\nYour account was created.\nEmail: {email}\nPassword: {password}\n\nPlease change your password after first login.
+        """
+        return await self.send_email(email, subject, body)
+
+    async def send_email_verification(self, email: str, username: str, verification_token: str, background_tasks):
+        return await self.send_verification_email(email, verification_token)
+
+    async def send_password_reset(self, email: str, username: str, reset_token: str, background_tasks):
+        return await self.send_password_reset_email(email, reset_token)
+
 # Create global instance
 email_service = EmailService()

@@ -38,13 +38,24 @@ import httpx
 from app.security.rate_limit import LoginRateLimiter
 from app.security.csrf import ensure_csrf_cookie, verify_csrf, CSRF_COOKIE_NAME
 from app.api.responses import api_ok, api_error
-from app.api.mock_files import router as mock_files_router
+from pydantic import BaseModel, EmailStr
+# Optional mock routes (may be absent in production)
+try:
+    from app.api.mock_files import router as mock_files_router
+except Exception:
+    mock_files_router = None
 import subprocess
 import tempfile
 import os
 
-# Create database tables
-Base.metadata.create_all(bind=engine)
+# Create database tables (best-effort; don't fail import if DB unavailable)
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as _e:
+    try:
+        logger.log_error(f"DB create_all skipped: {_e}")
+    except Exception:
+        pass
 
 # Create FastAPI app
 app = FastAPI(
@@ -439,6 +450,35 @@ async def verify_email(request: EmailVerificationRequest, db: Session = Depends(
         message="Email successfully verified!",
         verified=True
     )
+
+
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
+
+
+@app.post("/auth/resend-verification")
+async def resend_verification_email(req: ResendVerificationRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    """Resend email verification link to a user by email."""
+    user = AuthService.get_user_by_email(db, req.email)
+    # Do not leak user existence
+    if not user:
+        return api_ok(message="If the email exists, a verification link has been sent.")
+    if user.is_email_verified:
+        return api_ok(message="Email already verified")
+
+    # Generate or reuse token
+    token = user.email_verification_token or str(uuid.uuid4())
+    if not user.email_verification_token:
+        user.email_verification_token = token
+        db.commit()
+
+    await email_service.send_email_verification(
+        email=user.email,
+        username=user.username or user.email,
+        verification_token=token,
+        background_tasks=background_tasks,
+    )
+    return api_ok(message="Verification email sent")
 
 @app.get("/verify-email", response_class=HTMLResponse)
 async def verify_email_page(request: Request, token: str = None):
@@ -1561,17 +1601,27 @@ async def health_check():
     """Check system health (flattened services + meta)."""
     data = await HealthCheckService.check_all()
     services = data.get("services") or {}
-    flat = {
-        "database": services.get("database"),
-        "redis": services.get("redis"),
-        "minio": services.get("minio"),
-        "postgres": services.get("postgres"),
-        "overall_status": data.get("overall_status"),
-        "timestamp": datetime.utcnow().isoformat(),
-        "uptime_sec": int(time.monotonic() - APP_START_TIME),
-        "version": app.version,
-    }
-    return HealthResponse(**flat)
+    # Build typed services map
+    typed_services = {}
+    for key in ("database", "redis", "minio", "postgres"):
+        val = services.get(key)
+        if isinstance(val, dict):
+            payload = {"status": val.get("status") or "unknown", **{k: v for k, v in val.items() if k != "status"}}
+            typed_services[key] = ServiceHealth(**payload)
+        elif isinstance(val, bool):
+            typed_services[key] = ServiceHealth(status="healthy" if val else "unhealthy")
+        elif val is None:
+            typed_services[key] = ServiceHealth(status="unknown")
+        else:
+            typed_services[key] = ServiceHealth(status=str(val))
+
+    return HealthResponse(
+        overall_status=data.get("overall_status") or "degraded",
+        services=typed_services,
+        timestamp=time.time(),
+        uptime_sec=int(time.monotonic() - APP_START_TIME),
+        version=app.version,
+    )
 
 @app.get("/health/database")
 async def health_database():
@@ -1665,8 +1715,9 @@ async def admin_system_page(request: Request):
         return RedirectResponse(url="/login", status_code=302)
     return templates.TemplateResponse("admin-system.html", {"request": request, "user": current_user})
 
-# Include mock files router
-app.include_router(mock_files_router)
+# Include mock files router if available
+if mock_files_router is not None:
+    app.include_router(mock_files_router)
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

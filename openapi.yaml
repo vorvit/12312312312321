@@ -1,0 +1,1453 @@
+openapi: 3.1.0
+info:
+  title: IFC Auth Service
+  description: Authentication and authorization service for IFC web platform
+  version: 1.0.0
+paths:
+  /:
+    get:
+      summary: Home
+      description: Home page
+      operationId: home__get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            text/html:
+              schema:
+                type: string
+  /login:
+    get:
+      summary: Login Page
+      description: Login page
+      operationId: login_page_login_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            text/html:
+              schema:
+                type: string
+  /register:
+    get:
+      summary: Register Page
+      description: Register page
+      operationId: register_page_register_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            text/html:
+              schema:
+                type: string
+  /dashboard:
+    get:
+      summary: Dashboard
+      description: User dashboard page
+      operationId: dashboard_dashboard_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+      security:
+      - HTTPBearer: []
+  /admin:
+    get:
+      summary: Admin Page
+      description: Admin panel page
+      operationId: admin_page_admin_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            text/html:
+              schema:
+                type: string
+  /forgot-password:
+    get:
+      summary: Forgot Password Page
+      description: Forgot password page
+      operationId: forgot_password_page_forgot_password_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            text/html:
+              schema:
+                type: string
+  /reset-password:
+    get:
+      summary: Reset Password Page
+      description: Reset password page
+      operationId: reset_password_page_reset_password_get
+      parameters:
+      - name: token
+        in: query
+        required: false
+        schema:
+          type: string
+          title: Token
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            text/html:
+              schema:
+                type: string
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /auth/check:
+    get:
+      summary: Check Auth
+      description: Check if user is authenticated
+      operationId: check_auth_auth_check_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /auth/forgot-password:
+    post:
+      summary: Forgot Password
+      description: Request password reset
+      operationId: forgot_password_auth_forgot_password_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /auth/reset-password:
+    post:
+      summary: Reset Password
+      description: Reset password with token
+      operationId: reset_password_auth_reset_password_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirm'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /auth/register:
+    post:
+      summary: Register
+      description: Register a new user
+      operationId: register_auth_register_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /auth/login:
+    post:
+      summary: Login
+      description: Login user and return access token
+      operationId: login_auth_login_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /auth/verify-email:
+    post:
+      summary: Verify Email
+      description: Verify user email with token
+      operationId: verify_email_auth_verify_email_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailVerificationRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailVerificationResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /auth/resend-verification:
+    post:
+      summary: Resend Verification Email
+      description: Resend email verification link to a user by email.
+      operationId: resend_verification_email_auth_resend_verification_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResendVerificationRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /verify-email:
+    get:
+      summary: Verify Email Page
+      description: Email verification page
+      operationId: verify_email_page_verify_email_get
+      parameters:
+      - name: token
+        in: query
+        required: false
+        schema:
+          type: string
+          title: Token
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            text/html:
+              schema:
+                type: string
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /auth/me:
+    get:
+      summary: Get Current User Info
+      description: Get current user information
+      operationId: get_current_user_info_auth_me_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+      security:
+      - HTTPBearer: []
+  /users/me:
+    get:
+      summary: Get Current User Info
+      description: Get current user information
+      operationId: get_current_user_info_users_me_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+      security:
+      - HTTPBearer: []
+  /users/login-history:
+    get:
+      summary: Get User Login History
+      description: Get user login history
+      operationId: get_user_login_history_users_login_history_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginHistoryResponse'
+      security:
+      - HTTPBearer: []
+  /profile:
+    get:
+      summary: Profile Page
+      description: User profile page
+      operationId: profile_page_profile_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            text/html:
+              schema:
+                type: string
+  /ifc-viewer:
+    get:
+      summary: Ifc Viewer Page
+      description: IFC Viewer page - redirects to TSP viewer
+      operationId: ifc_viewer_page_ifc_viewer_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            text/html:
+              schema:
+                type: string
+  /api/admin/users:
+    get:
+      summary: Get Users
+      description: Get all users (admin only)
+      operationId: get_users_api_admin_users_get
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 1
+          title: Page
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 10
+          title: Size
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /admin/stats:
+    get:
+      summary: Get Admin Stats
+      description: Get admin statistics
+      operationId: get_admin_stats_admin_stats_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /admin/logs:
+    get:
+      summary: Get Logs
+      description: Get system logs for admin panel
+      operationId: get_logs_admin_logs_get
+      parameters:
+      - name: log_type
+        in: query
+        required: false
+        schema:
+          type: string
+          default: main
+          title: Log Type
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 100
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /admin/logs/stats:
+    get:
+      summary: Get Log Stats
+      description: Get log statistics
+      operationId: get_log_stats_admin_logs_stats_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogStats'
+  /api/admin/users/create:
+    post:
+      summary: Create User
+      description: Create a new user (admin only)
+      operationId: create_user_api_admin_users_create_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/admin/users/{user_id}:
+    put:
+      summary: Update User
+      description: Update user information (admin only)
+      operationId: update_user_api_admin_users__user_id__put
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: User Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/admin/users/{user_id}/toggle:
+    post:
+      summary: Toggle User Status
+      description: Toggle user active status (admin only)
+      operationId: toggle_user_status_api_admin_users__user_id__toggle_post
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: User Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              title: Request
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/admin/users/{user_id}/delete:
+    delete:
+      summary: Delete User
+      description: Delete user (admin only)
+      operationId: delete_user_api_admin_users__user_id__delete_delete
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: User Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/admin/users/export:
+    get:
+      summary: Export Users
+      description: Export users to CSV with filters (admin only)
+      operationId: export_users_api_admin_users_export_get
+      parameters:
+      - name: search
+        in: query
+        required: false
+        schema:
+          type: string
+          title: Search
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          title: Status
+      - name: role
+        in: query
+        required: false
+        schema:
+          type: string
+          title: Role
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /admin/settings:
+    get:
+      summary: Get System Settings
+      description: Get system settings (admin only)
+      operationId: get_system_settings_admin_settings_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+    put:
+      summary: Update System Settings
+      description: Update system settings (admin only)
+      operationId: update_system_settings_admin_settings_put
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SystemSettingsUpdate'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /admin/backup:
+    post:
+      summary: Create Backup
+      description: Create system backup (admin only)
+      operationId: create_backup_admin_backup_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BackupCreateRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /admin/backup/download/{filename}:
+    get:
+      summary: Download Backup
+      description: Download backup file (admin only)
+      operationId: download_backup_admin_backup_download__filename__get
+      parameters:
+      - name: filename
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Filename
+      - name: token
+        in: query
+        required: false
+        schema:
+          type: string
+          title: Token
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /admin/backup/list:
+    get:
+      summary: List Backups
+      description: List available backups (admin only)
+      operationId: list_backups_admin_backup_list_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /files/upload:
+    post:
+      summary: Upload File
+      description: Upload a file to user's storage
+      operationId: upload_file_files_upload_post
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Body_upload_file_files_upload_post'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/files/convert/{filename}:
+    post:
+      summary: Convert Ifc To Frag
+      description: Manually trigger IFC->FRAG conversion for a user's file.
+      operationId: convert_ifc_to_frag_api_files_convert__filename__post
+      parameters:
+      - name: filename
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Filename
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/files:
+    get:
+      summary: List Files
+      description: List user's files
+      operationId: list_files_api_files_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /files/download/{filename}:
+    get:
+      summary: Download File
+      description: Download a file
+      operationId: download_file_files_download__filename__get
+      parameters:
+      - name: filename
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Filename
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    head:
+      summary: Head Download File
+      operationId: head_download_file_files_download__filename__head
+      parameters:
+      - name: filename
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Filename
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/files/download/{filename}:
+    get:
+      summary: Download File With Token
+      description: Download a file with token authentication for TSP viewer
+      operationId: download_file_with_token_api_files_download__filename__get
+      parameters:
+      - name: filename
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Filename
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    head:
+      summary: Head Download File With Token
+      operationId: head_download_file_with_token_api_files_download__filename__head
+      parameters:
+      - name: filename
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Filename
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /files/view/{filename}:
+    get:
+      summary: View File
+      description: View a file in browser
+      operationId: view_file_files_view__filename__get
+      parameters:
+      - name: filename
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Filename
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /files/delete/{filename}:
+    delete:
+      summary: Delete File
+      description: Delete a file
+      operationId: delete_file_files_delete__filename__delete
+      parameters:
+      - name: filename
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Filename
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /auth/google:
+    get:
+      summary: Google Login
+      description: Initiate Google OAuth login
+      operationId: google_login_auth_google_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /auth/google/callback:
+    get:
+      summary: Google Callback
+      description: Handle Google OAuth callback
+      operationId: google_callback_auth_google_callback_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /health:
+    get:
+      summary: Health Check
+      description: Check system health (flattened services + meta).
+      operationId: health_check_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /health/database:
+    get:
+      summary: Health Database
+      description: Check database health
+      operationId: health_database_health_database_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /health/redis:
+    get:
+      summary: Health Redis
+      description: Check Redis health
+      operationId: health_redis_health_redis_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /health/minio:
+    get:
+      summary: Health Minio
+      description: Check MinIO health
+      operationId: health_minio_health_minio_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /health/postgres:
+    get:
+      summary: Health Postgres
+      description: Check PostgreSQL health
+      operationId: health_postgres_health_postgres_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /api/frag-converter/health:
+    get:
+      summary: Frag Converter Health
+      operationId: frag_converter_health_api_frag_converter_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /files:
+    get:
+      summary: Files Page
+      description: Files management page with auth and redirect to login if missing.
+      operationId: files_page_files_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            text/html:
+              schema:
+                type: string
+  /settings:
+    get:
+      summary: Settings Page
+      description: Settings page; require login, redirect if missing.
+      operationId: settings_page_settings_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            text/html:
+              schema:
+                type: string
+  /help:
+    get:
+      summary: Help Page
+      description: Help page; require login, redirect if missing.
+      operationId: help_page_help_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            text/html:
+              schema:
+                type: string
+  /admin/users:
+    get:
+      summary: Admin Users Page
+      description: Admin users management page; require admin, redirect to login if
+        missing.
+      operationId: admin_users_page_admin_users_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            text/html:
+              schema:
+                type: string
+  /admin/system:
+    get:
+      summary: Admin System Page
+      description: Admin system status page; require admin, redirect if missing.
+      operationId: admin_system_page_admin_system_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            text/html:
+              schema:
+                type: string
+components:
+  schemas:
+    BackupCreateRequest:
+      properties:
+        backup_type:
+          type: string
+          title: Backup Type
+          default: full
+        compression:
+          type: string
+          title: Compression
+          default: zip
+        include_user_files:
+          type: boolean
+          title: Include User Files
+          default: true
+      type: object
+      title: BackupCreateRequest
+    Body_upload_file_files_upload_post:
+      properties:
+        file:
+          type: string
+          format: binary
+          title: File
+      type: object
+      required:
+      - file
+      title: Body_upload_file_files_upload_post
+    EmailVerificationRequest:
+      properties:
+        token:
+          type: string
+          title: Token
+      type: object
+      required:
+      - token
+      title: EmailVerificationRequest
+    EmailVerificationResponse:
+      properties:
+        message:
+          type: string
+          title: Message
+        verified:
+          type: boolean
+          title: Verified
+      type: object
+      required:
+      - message
+      - verified
+      title: EmailVerificationResponse
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    HealthResponse:
+      properties:
+        overall_status:
+          type: string
+          title: Overall Status
+        services:
+          additionalProperties:
+            $ref: '#/components/schemas/ServiceHealth'
+          type: object
+          title: Services
+        timestamp:
+          type: number
+          title: Timestamp
+        uptime_sec:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Uptime Sec
+        version:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Version
+      type: object
+      required:
+      - overall_status
+      - services
+      - timestamp
+      title: HealthResponse
+    LogStats:
+      properties:
+        total_logs:
+          type: integer
+          title: Total Logs
+        auth_logs:
+          type: integer
+          title: Auth Logs
+        file_logs:
+          type: integer
+          title: File Logs
+        admin_logs:
+          type: integer
+          title: Admin Logs
+        error_logs:
+          type: integer
+          title: Error Logs
+        last_24h:
+          type: integer
+          title: Last 24H
+      type: object
+      required:
+      - total_logs
+      - auth_logs
+      - file_logs
+      - admin_logs
+      - error_logs
+      - last_24h
+      title: LogStats
+    LoginHistoryEntry:
+      properties:
+        timestamp:
+          type: string
+          title: Timestamp
+        ip_address:
+          type: string
+          title: Ip Address
+        user_agent:
+          type: string
+          title: User Agent
+        success:
+          type: boolean
+          title: Success
+      type: object
+      required:
+      - timestamp
+      - ip_address
+      - user_agent
+      - success
+      title: LoginHistoryEntry
+    LoginHistoryResponse:
+      properties:
+        login_history:
+          items:
+            $ref: '#/components/schemas/LoginHistoryEntry'
+          type: array
+          title: Login History
+      type: object
+      required:
+      - login_history
+      title: LoginHistoryResponse
+    LoginRequest:
+      properties:
+        email:
+          type: string
+          format: email
+          title: Email
+        password:
+          type: string
+          title: Password
+      type: object
+      required:
+      - email
+      - password
+      title: LoginRequest
+    PasswordResetConfirm:
+      properties:
+        token:
+          type: string
+          title: Token
+        new_password:
+          type: string
+          title: New Password
+        confirm_password:
+          type: string
+          title: Confirm Password
+      type: object
+      required:
+      - token
+      - new_password
+      - confirm_password
+      title: PasswordResetConfirm
+    PasswordResetRequest:
+      properties:
+        email:
+          type: string
+          format: email
+          title: Email
+      type: object
+      required:
+      - email
+      title: PasswordResetRequest
+    ResendVerificationRequest:
+      properties:
+        email:
+          type: string
+          format: email
+          title: Email
+      type: object
+      required:
+      - email
+      title: ResendVerificationRequest
+    ServiceHealth:
+      properties:
+        status:
+          type: string
+          title: Status
+        type:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Type
+        host:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Host
+        endpoint:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Endpoint
+        url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Url
+        error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error
+        buckets:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Buckets
+        bucket_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Bucket Name
+        db:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Db
+        database:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Database
+      type: object
+      required:
+      - status
+      title: ServiceHealth
+    SystemSettingsUpdate:
+      properties:
+        site_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Site Name
+        default_quota:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Default Quota
+        session_timeout:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Session Timeout
+        require_email_verification:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Require Email Verification
+        max_file_size:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Max File Size
+        max_login_attempts:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Max Login Attempts
+      type: object
+      title: SystemSettingsUpdate
+    Token:
+      properties:
+        access_token:
+          type: string
+          title: Access Token
+        token_type:
+          type: string
+          title: Token Type
+      type: object
+      required:
+      - access_token
+      - token_type
+      title: Token
+    UserCreate:
+      properties:
+        email:
+          type: string
+          format: email
+          title: Email
+        username:
+          type: string
+          title: Username
+        full_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Full Name
+        password:
+          type: string
+          title: Password
+      type: object
+      required:
+      - email
+      - username
+      - password
+      title: UserCreate
+    UserResponse:
+      properties:
+        email:
+          type: string
+          format: email
+          title: Email
+        username:
+          type: string
+          title: Username
+        full_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Full Name
+        id:
+          type: integer
+          title: Id
+        is_active:
+          type: boolean
+          title: Is Active
+        is_admin:
+          type: boolean
+          title: Is Admin
+        is_email_verified:
+          type: boolean
+          title: Is Email Verified
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        storage_quota:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Storage Quota
+        used_storage:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Used Storage
+        last_login:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Last Login
+      type: object
+      required:
+      - email
+      - username
+      - id
+      - is_active
+      - is_admin
+      - is_email_verified
+      - created_at
+      title: UserResponse
+    UserUpdate:
+      properties:
+        email:
+          anyOf:
+          - type: string
+            format: email
+          - type: 'null'
+          title: Email
+        username:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Username
+        full_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Full Name
+        password:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Password
+      type: object
+      title: UserUpdate
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+  securitySchemes:
+    HTTPBearer:
+      type: http
+      scheme: bearer
