@@ -286,7 +286,7 @@ fragments.list.onItemSet.add(async ({ value: model }) => {
     return Array.from(world.renderer!.three.clippingPlanes) || [];
   };
   if (!world.scene.three.children.includes(model.object)) {
-  world.scene.three.add(model.object);
+    world.scene.three.add(model.object);
   }
   model.visible = false;
   await fragments.core.update(true);
@@ -303,6 +303,18 @@ fragments.list.onItemSet.add(async ({ value: model }) => {
     window.dispatchEvent(new CustomEvent('modelsUpdated', { detail: { models: Array.from(fragments.list.keys()) } }));
   } catch {}
 });
+
+// Keep ModelManager in sync when a model is deleted from fragments list
+try {
+  const anyList: any = (fragments as any).list;
+  anyList?.onItemDeleted?.add?.(({ key }: any) => {
+    try {
+      const mm = (window as any).ModelManager?.getInstance();
+      (mm as any)?.preloadedModels?.delete?.(key);
+      window.dispatchEvent(new CustomEvent('modelsUpdated', { detail: { models: Array.from((fragments as any).list.keys()) } }));
+    } catch {}
+  });
+} catch {}
 
 // Viewport Layouts
 const [viewportSettings] = BUI.Component.create(viewportSettingsTemplate, {
@@ -456,7 +468,15 @@ if (fileFromUrl) {
       const buf = await resp.arrayBuffer();
       const bytes = new Uint8Array(buf);
       const modelId = fileFromUrl.replace(/\.(ifc|ifcxml|ifczip)$/i, '');
-      const model = await ifcLoader.load(bytes, true, modelId);
+      const model = await ifcLoader.load(bytes, true, modelId, {
+        tolerancePlaneIntersection: 0.01,
+        tolerance: 0.01,
+      });
+      // Ensure it is visible in scene
+      if (!world.scene.three.children.includes(model.object)) {
+        world.scene.three.add(model.object);
+      }
+      model.visible = true;
       // Register into ModelManager so UI controls can manage it
       try {
         const mm = (window as any).ModelManager?.getInstance();
@@ -750,7 +770,10 @@ async function initializeAuth() {
         if (!response.ok) throw new Error(`Failed to fetch ${fileUrl}`);
         const buffer = await response.arrayBuffer();
         const bytes = new Uint8Array(buffer);
-        const model = await ifcLoader.load(bytes, true, modelId);
+        const model = await ifcLoader.load(bytes, true, modelId, {
+          tolerancePlaneIntersection: 0.01,
+          tolerance: 0.01,
+        });
         
         // Add to scene and show
         world.scene.three.add(model.object);

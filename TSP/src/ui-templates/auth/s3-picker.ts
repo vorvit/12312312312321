@@ -176,7 +176,10 @@ export async function openS3PickerModal(components: OBC.Components, options?: S3
           const buf = await resp.arrayBuffer();
           const bytes = new Uint8Array(buf);
           const modelId = filename.replace(/\.(ifc|ifcxml|ifczip)$/i, '');
-          await ifcLoader.load(bytes, true, modelId);
+          await ifcLoader.load(bytes, true, modelId, {
+            tolerancePlaneIntersection: 0.01,
+            tolerance: 0.01,
+          });
         } catch (e) {
           console.error('Load error for', filename, e);
         }
@@ -203,7 +206,10 @@ export async function openS3PickerModal(components: OBC.Components, options?: S3
           const buf = await resp.arrayBuffer();
           const bytes = new Uint8Array(buf);
           const modelId = filename.replace(/\.(ifc|ifcxml|ifczip)$/i, '');
-          await ifcLoader.load(bytes, true, modelId);
+          await ifcLoader.load(bytes, true, modelId, {
+            tolerancePlaneIntersection: 0.01,
+            tolerance: 0.01,
+          });
         } catch (e) {
           console.error('Load error for', filename, e);
         }
