@@ -1,4 +1,5 @@
 import * as THREE from "three";
+// import ThreeGeo from "three-geo/index.js"; // Temporarily disabled
 import * as OBC from "@thatopen/components";
 import * as OBF from "@thatopen/components-front";
 import * as BUI from "@thatopen/ui";
@@ -176,6 +177,8 @@ console.log('Setting up IFC loader...');
 await ifcLoader.setup({
   autoSetWasm: false,
   wasm: { absolute: true, path: "https://unpkg.com/web-ifc@0.0.70/" },
+  tolerancePlaneIntersection: 0.01,
+  tolerance: 0.01,
 });
 console.log('IFC loader setup completed');
 
@@ -457,6 +460,7 @@ if (fileFromUrl) {
       const bytes = new Uint8Array(buf);
       const modelId = fileFromUrl.replace(/\.(ifc|ifcxml|ifczip)$/i, '');
       const model = await ifcLoader.load(bytes, true, modelId);
+      try { await (window as any).__tryLoadTerrainFromIfc(bytes); } catch {}
       // Register into ModelManager so UI controls can manage it
       try {
         const mm = (window as any).ModelManager?.getInstance();
@@ -983,3 +987,69 @@ loadCameraState();
     } catch {}
   };
 })();
+
+// === Terrain integration via IFC geo ===
+let __lastTerrain: THREE.Group | null = null;
+
+function __toDecimalDMS(dms?: number[]): number | null {
+  if (!Array.isArray(dms) || dms.length === 0) return null;
+  const d = Number(dms[0] ?? 0);
+  const m = Number(dms[1] ?? 0);
+  const s = Number(dms[2] ?? 0);
+  const sign = d < 0 ? -1 : 1;
+  return sign * (Math.abs(d) + m / 60 + s / 3600);
+}
+
+async function __loadTerrainForOrigin(origin: [number, number], radiusKm = 2.0, zoom = 12) {
+  try {
+    const key = (import.meta as any).env?.VITE_MAPTILER_KEY;
+    if (!key) return;
+    if (__lastTerrain) {
+      try { world.scene.three.remove(__lastTerrain); } catch {}
+      __lastTerrain = null;
+    }
+    // Temporarily disabled ThreeGeo integration
+    // const tgeo = new ThreeGeo({
+    //   tokenMapTiler: key,
+    //   apiRgb: 'maptiler-terrain-rgb',
+    //   apiSatellite: 'maptiler-satellite',
+    // });
+    // const terrain = await tgeo.getTerrainRgb(origin, radiusKm, zoom);
+    // __lastTerrain = terrain as unknown as THREE.Group;
+    // world.scene.three.add(terrain as unknown as THREE.Object3D);
+    console.log('ThreeGeo integration temporarily disabled');
+  } catch (e) {
+    console.warn('Terrain loading failed:', e);
+  }
+}
+
+async function __extractIfcSiteLatLng(bytes: Uint8Array): Promise<[number, number] | null> {
+  try {
+    const mod: any = await import('https://unpkg.com/web-ifc@0.0.70/web-ifc-api.js');
+    const { IfcAPI, IFCSITE } = mod as any;
+    const api = new IfcAPI();
+    await api.Init();
+    const modelID = api.OpenModel(bytes);
+    const ids = api.GetLineIDsWithType(modelID, IFCSITE);
+    if (!ids || ids.size() === 0) {
+      api.CloseModel(modelID);
+      return null;
+    }
+    const siteId = ids.get(0);
+    const site = api.GetLine(modelID, siteId, true);
+    api.CloseModel(modelID);
+    const lat = __toDecimalDMS(site?.RefLatitude);
+    const lng = __toDecimalDMS(site?.RefLongitude);
+    if (lat === null || lng === null) return null;
+    return [lat, lng];
+  } catch (e) {
+    console.warn('Failed to extract IFC site coords:', e);
+    return null;
+  }
+}
+
+// Expose a global helper to be called after IFC file loads
+(window as any).__tryLoadTerrainFromIfc = async (bytes: Uint8Array) => {
+  const origin = await __extractIfcSiteLatLng(bytes);
+  if (origin) await __loadTerrainForOrigin(origin);
+};

@@ -9,6 +9,22 @@
 - ✅ Минимальное вмешательство в существующий код
 - ✅ Перенаправление на загрузку файлов в Auth проекте
 
+### Рельеф (MapTiler)
+
+- В корне `TSP` создайте `.env.local` с `VITE_MAPTILER_KEY=...` (или добавьте переменную окружения в Vercel).
+- В проект добавлен вендорный `three-geo` (`vendor/three-geo`) с поддержкой MapTiler (`terrain-rgb` и `satellite-v2`).
+- Использование в коде:
+
+```ts
+import ThreeGeo from 'three-geo/index.js';
+
+const tgeo = new ThreeGeo({
+  tokenMapTiler: import.meta.env.VITE_MAPTILER_KEY,
+  apiRgb: 'maptiler-terrain-rgb',
+  apiSatellite: 'maptiler-satellite',
+});
+```
+
 ## Архитектура интеграции
 
 ```

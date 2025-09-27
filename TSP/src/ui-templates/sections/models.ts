@@ -2,7 +2,6 @@ import * as BUI from "@thatopen/ui";
 import * as CUI from "@thatopen/ui-obc";
 import * as OBC from "@thatopen/components";
 import { appIcons } from "../../globals";
-import { openS3PickerModal } from "../auth/s3-picker";
 
 export interface ModelsPanelState {
   components: OBC.Components;
@@ -34,7 +33,7 @@ export const modelsPanelTemplate: BUI.StatefullComponent<ModelsPanelState> = (
       try {
         const buffer = await file.arrayBuffer();
         const bytes = new Uint8Array(buffer);
-        await ifcLoader.load(bytes, true, file.name.replace(".ifc", ""));
+        const model = await ifcLoader.load(bytes, true, file.name.replace(".ifc", ""));
         console.log(`IFC file ${file.name} loaded successfully`);
       } catch (error) {
         console.error('Error loading IFC file:', error);
@@ -97,7 +96,6 @@ export const modelsPanelTemplate: BUI.StatefullComponent<ModelsPanelState> = (
           <bim-text-input @input=${onSearch} vertical placeholder="Search..." debounce="200"></bim-text-input>
           <bim-button style="flex: 0;" icon=${appIcons.ADD}>
             <bim-context-menu style="gap: 0.25rem;">
-              <bim-button label="S3 Storage" @click=${() => openS3PickerModal(components)}></bim-button>
               <bim-button label="IFC" @click=${onAddIfcModel}></bim-button>
               <bim-button label="Fragments" @click=${onAddFragmentsModel}></bim-button>
             </bim-context-menu> 

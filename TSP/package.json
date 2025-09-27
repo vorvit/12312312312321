@@ -21,12 +21,29 @@
     "vite": "5.2.0"
   },
   "dependencies": {
+    "@mapbox/sphericalmercator": "^2.0.1",
+    "@mapbox/tile-cover": "^3.0.2",
+    "@mapbox/tilebelt": "^2.0.2",
+    "@mapbox/vector-tile": "^2.0.4",
     "@thatopen/components": "~3.1.0",
     "@thatopen/components-front": "~3.1.0",
     "@thatopen/fragments": "~3.1.0",
     "@thatopen/ui": "~3.1.0",
     "@thatopen/ui-obc": "~3.1.0",
+    "@turf/area": "^7.2.0",
+    "@turf/destination": "^7.2.0",
+    "@turf/helpers": "^7.2.0",
+    "@turf/intersect": "^7.2.0",
+    "@turf/transform-rotate": "^7.2.0",
+    "@turf/transform-translate": "^7.2.0",
+    "@turf/union": "^7.2.0",
+    "get-pixels": "^3.3.3",
+    "pbf": "^4.0.1",
+    "regenerator-runtime": "^0.14.1",
     "three": "0.175.0",
-    "web-ifc": "0.0.70"
+    "three-laser-pointer": "^1.2.3",
+    "uniq": "^1.0.1",
+    "web-ifc": "^0.0.71",
+    "xhr": "^2.6.0"
   }
 }

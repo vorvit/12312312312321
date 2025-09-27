@@ -1,8 +1,14 @@
 /* eslint-disable import/no-extraneous-dependencies */
 import { defineConfig } from "vite";
+import { resolve } from "path";
 
 export default defineConfig({
   base: "./",
+  resolve: {
+    alias: {
+      // "three-geo": resolve(__dirname, "../vendor/three-geo/src"), // Temporarily disabled
+    },
+  },
   server: {
     port: 5174,
     host: true,
